@@ -200,7 +200,7 @@ class TrippyCrew:
                 f"or consider budget destination '{alt_dest}'."
             )
 
-        # 9. Step 5: Itinerary Agent (synthesize final plan)
+        # 9. Step 5: Itinerary Agent (synthesize final plan with live weather & route context)
         itinerary_output = await self.itinerary_agent.run(
             preferences=preferences,
             destination=selected_dest,
@@ -208,6 +208,8 @@ class TrippyCrew:
             stay_activity=stay_output,
             budget=budget_output,
             budget_warning=budget_warning,
+            weather=weather_res,
+            route=route_res,
         )
 
         # 10. Assemble final TripResult

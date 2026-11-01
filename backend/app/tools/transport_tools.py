@@ -27,6 +27,9 @@ def estimate_transport(
     travel_style: TravelStyle = TravelStyle.cultural,
     refinement_level: int = 0,
     currency: str = "USD",
+    live_forex_rate: Optional[float] = None,
+    distance_km: Optional[float] = None,
+    route_duration_hours: Optional[float] = None,
 ) -> TransportAgentOutput:
     """
     Estimates outbound and return transport between origin and destination.
@@ -49,22 +52,22 @@ def estimate_transport(
         mode = TransportMode.train if is_same_region else TransportMode.flight
 
     is_inr = currency.upper() == "INR"
-    rate = CURRENCY_MULTIPLIERS.get(currency.upper(), 1.0)
+    rate = live_forex_rate if live_forex_rate is not None else CURRENCY_MULTIPLIERS.get(currency.upper(), 1.0)
 
     # Base cost estimation per person round-trip
     if is_same_region:
         if mode == TransportMode.train:
             base_pp = 95.0 if not is_inr else 22.0
-            duration_hours = 3.5 if "delhi" not in origin.lower() or "kasol" not in destination.lower() else 9.0
+            duration_hours = route_duration_hours if route_duration_hours else (3.5 if "delhi" not in origin.lower() or "kasol" not in destination.lower() else 9.0)
         elif mode == TransportMode.bus:
             base_pp = 45.0 if not is_inr else 15.0
-            duration_hours = 6.0 if "delhi" not in origin.lower() or "kasol" not in destination.lower() else 10.5
+            duration_hours = route_duration_hours if route_duration_hours else (6.0 if "delhi" not in origin.lower() or "kasol" not in destination.lower() else 10.5)
         elif mode == TransportMode.car:
             base_pp = 120.0 if not is_inr else 40.0
-            duration_hours = 4.0 if "delhi" not in origin.lower() or "kasol" not in destination.lower() else 9.5
+            duration_hours = route_duration_hours if route_duration_hours else (4.0 if "delhi" not in origin.lower() or "kasol" not in destination.lower() else 9.5)
         else:
             base_pp = 140.0 if not is_inr else 50.0
-            duration_hours = 1.5
+            duration_hours = route_duration_hours if route_duration_hours else 1.5
     else:
         # Long-distance / international
         if mode == TransportMode.flight:

@@ -40,6 +40,8 @@ class ItineraryAgent(TrippyAgent):
         stay_activity: StayActivityAgentOutput,
         budget: BudgetAgentOutput,
         budget_warning: Optional[str] = None,
+        weather: Optional[object] = None,
+        route: Optional[object] = None,
     ) -> ItineraryAgentOutput:
         """
         Synthesizes validated outputs into an ItineraryAgentOutput with DayPlan items.
@@ -97,10 +99,22 @@ class ItineraryAgent(TrippyAgent):
         )
 
         travel_tips = [
-            f"Carry local currency and a no-foreign-transaction-fee credit card.",
+            f"Carry local currency ({preferences.currency.upper()}) and a card with zero foreign transaction fees.",
             f"Download offline maps of {destination} before departure.",
             f"Keep digital copies of booking confirmations and transport passes.",
         ]
+
+        # Incorporate live weather insights
+        if weather and hasattr(weather, "condition") and hasattr(weather, "temperature_c"):
+            travel_tips.append(
+                f"Live Forecast for {destination}: {weather.condition} (~{weather.temperature_c:.1f}°C, {getattr(weather, 'precipitation_chance', 0):.0f}% rain chance). Pack accordingly!"
+            )
+
+        # Incorporate live route insights
+        if route and hasattr(route, "distance_km") and hasattr(route, "duration_hours"):
+            travel_tips.append(
+                f"Transit corridor: ~{route.distance_km:.0f} km (~{route.duration_hours:.1f}h transit via {getattr(route, 'provider_name', 'Live Routing')})."
+            )
 
         warnings: List[str] = []
         if budget_warning:

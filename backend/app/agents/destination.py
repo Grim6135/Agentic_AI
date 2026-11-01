@@ -53,6 +53,16 @@ class DestinationAgent(TrippyAgent):
             f"aligning with {', '.join(preferences.interests) if preferences.interests else 'curated highlights'}."
         )
 
+        # Incorporate real-world place knowledge via Wikipedia Places integration
+        real_info = None
+        try:
+            from app.integrations.places import places_service
+            real_info = await places_service.get_destination_info(selected)
+            if real_info and real_info.summary and candidates:
+                candidates[0].why_matched += f" Grounded in verified geographical data: {real_info.summary[:120]}…"
+        except Exception:
+            pass
+
         # Incorporate RAG guidebook insights if available
         if rag_passages:
             matching_passage = next(
@@ -69,7 +79,7 @@ class DestinationAgent(TrippyAgent):
             rationale=rationale,
         )
 
-        # 2. If AI provider available, optionally refine narrative
+        # 2. If AI provider available, optionally refine narrative with live place data
         if llm_service.is_available():
             try:
                 user_fixed = (
@@ -77,13 +87,19 @@ class DestinationAgent(TrippyAgent):
                     f"You MUST set selected_destination to '{preferences.destinations[0]}' and candidate 0 name to '{preferences.destinations[0]}'.\n"
                     if preferences.destinations else ""
                 )
+                live_wiki_ctx = ""
+                if real_info and real_info.summary:
+                    lm_names = ", ".join(l.name for l in real_info.landmarks[:5])
+                    live_wiki_ctx = f"Verified geographical summary: {real_info.summary[:300]}\nKey landmarks: {lm_names}\n"
+
                 prompt = (
                     f"{user_fixed}"
                     f"Traveler from {preferences.origin} planning a {duration_days}-day {preferences.travel_style.value} trip.\n"
                     f"Interests: {preferences.interests}.\n"
                     f"Budget max: {preferences.budget_max} {preferences.currency}.\n"
                     f"Top candidate: {selected}.\n"
-                    f"Provide refined destination evaluation and rationale."
+                    f"{live_wiki_ctx}"
+                    f"Provide refined destination evaluation, authentic highlights, and rationale."
                 )
                 system = f"You are the {self.role}. {self.backstory}"
                 ai_res = await llm_service.generate_structured(prompt, system, DestinationAgentOutput)

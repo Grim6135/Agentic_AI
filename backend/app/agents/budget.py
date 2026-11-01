@@ -46,10 +46,11 @@ class BudgetAgent(TrippyAgent):
 
         if llm_service.is_available() and not deterministic_output.is_within_budget:
             try:
+                curr_sym = "₹" if currency.upper() == "INR" else ("€" if currency.upper() == "EUR" else ("£" if currency.upper() == "GBP" else "$"))
                 prompt = (
-                    f"Trip costs {breakdown.total:.2f} {currency}, exceeding budget limit of {budget_max:.2f}.\n"
-                    f"Breakdown: Transport: ${breakdown.transport}, Lodging: ${breakdown.accommodation}, "
-                    f"Activities: ${breakdown.activities}, Food: ${breakdown.food_estimate}.\n"
+                    f"Trip costs {curr_sym}{breakdown.total:.2f} {currency}, exceeding budget limit of {curr_sym}{budget_max:.2f}.\n"
+                    f"Breakdown ({currency}): Transport: {curr_sym}{breakdown.transport:.2f}, Lodging: {curr_sym}{breakdown.accommodation:.2f}, "
+                    f"Activities: {curr_sym}{breakdown.activities:.2f}, Food: {curr_sym}{breakdown.food_estimate:.2f}.\n"
                     f"Provide refined reduction analysis while preserving deterministic calculations."
                 )
                 system = f"You are the {self.role}. {self.backstory}"

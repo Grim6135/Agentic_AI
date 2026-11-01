@@ -36,6 +36,25 @@ class TransportAgent(TrippyAgent):
         Calculates transport estimates between origin and destination.
         refinement_level: 0 (default), 1 (economy saver), 2 (deep budget).
         """
+        # 1. Fetch live route estimates and live forex exchange rate
+        route_info = None
+        live_rate = None
+        try:
+            from app.integrations.maps import route_service
+            route_info = await route_service.get_route(
+                origin=preferences.origin,
+                destination=destination,
+                mode=preferences.preferred_transport.value,
+            )
+        except Exception:
+            pass
+
+        try:
+            from app.integrations.forex import forex_service
+            live_rate = await forex_service.get_multiplier_from_usd(preferences.currency)
+        except Exception:
+            pass
+
         deterministic_output = estimate_transport(
             origin=preferences.origin,
             destination=destination,
@@ -44,15 +63,23 @@ class TransportAgent(TrippyAgent):
             travel_style=preferences.travel_style,
             refinement_level=refinement_level,
             currency=preferences.currency,
+            live_forex_rate=live_rate,
+            distance_km=route_info.distance_km if route_info else None,
+            route_duration_hours=route_info.duration_hours if route_info else None,
         )
 
         if llm_service.is_available() and refinement_level == 0:
             try:
                 curr_sym = "₹" if preferences.currency.upper() == "INR" else ("€" if preferences.currency.upper() == "EUR" else ("£" if preferences.currency.upper() == "GBP" else "$"))
+                route_snippet = f"Verified route distance: {route_info.distance_km:.1f} km, estimated travel time: ~{route_info.duration_hours:.1f}h ({route_info.provider_name}).\n" if route_info else ""
+                rate_snippet = f"Live Forex: 1 USD = {live_rate:.2f} {preferences.currency.upper()}.\n" if live_rate else ""
+
                 prompt = (
                     f"Estimate realistic round-trip transit from {preferences.origin} to {destination} for {preferences.travelers} traveler(s).\n"
                     f"Mode: {preferences.preferred_transport.value}. Style: {preferences.travel_style.value}.\n"
                     f"Currency: {preferences.currency.upper()} ({curr_sym}).\n"
+                    f"{route_snippet}"
+                    f"{rate_snippet}"
                     f"CRITICAL: 'legs' MUST contain exactly 2 TransportLeg items: one outbound leg ({preferences.origin} -> {destination}) "
                     f"and one return leg ({destination} -> {preferences.origin}).\n"
                     f"CRITICAL: All cost_estimate and total_cost numbers MUST be in {preferences.currency.upper()} ({curr_sym}) representing realistic fares.\n"

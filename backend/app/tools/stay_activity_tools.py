@@ -82,14 +82,32 @@ CURRENCY_MULTIPLIERS: Dict[str, float] = {
 }
 
 
-def _get_activities_for_destination(destination: str) -> List[Tuple[str, float, float, str]]:
-    """Finds matching curated activities or dynamically generates authentic ones for the destination."""
+def _get_activities_for_destination(
+    destination: str,
+    landmarks: Optional[List[str]] = None,
+) -> List[Tuple[str, float, float, str]]:
+    """Finds matching curated activities or dynamically generates authentic ones using verified landmarks."""
     dest_lower = destination.lower()
     for key, acts in DESTINATION_ACTIVITIES.items():
         if key in dest_lower:
             return acts
 
     clean_name = destination.split(",")[0].strip()
+
+    # If verified live landmarks are available from Wikipedia Geosearch, build authentic activities around them
+    if landmarks:
+        custom_acts = []
+        for idx, lm in enumerate(landmarks[:8]):
+            cost = 15.0 if idx % 2 == 1 else 0.0
+            custom_acts.append((
+                f"Explore {lm}",
+                3.0,
+                cost,
+                f"Discover and explore verified landmark '{lm}' in {clean_name} [Source: Verified Geosearch POI].",
+            ))
+        if custom_acts:
+            return custom_acts
+
     return [
         (f"{clean_name} Heritage & Cultural Exploration", 3.0, 15.0, f"Explore iconic cultural landmarks, historic quarters, and architecture across {clean_name}."),
         (f"{clean_name} Scenic Nature Trail & Panoramic Viewpoint", 3.5, 0.0, f"Scenic walk along picturesque local trails with panoramic viewpoints over {clean_name}."),
@@ -109,13 +127,15 @@ def recommend_stays_and_activities(
     interests: Optional[List[str]] = None,
     refinement_level: int = 0,
     currency: str = "USD",
+    live_forex_rate: Optional[float] = None,
+    landmarks: Optional[List[str]] = None,
 ) -> StayActivityAgentOutput:
     """
     Produces accommodation recommendations, activity schedules, and food estimates
     customized to the actual destination, currency, and travel style.
     """
     clean_city = destination.split(",")[0].strip()
-    rate = CURRENCY_MULTIPLIERS.get(currency.upper(), 1.0)
+    rate = live_forex_rate if live_forex_rate is not None else CURRENCY_MULTIPLIERS.get(currency.upper(), 1.0)
     is_inr = currency.upper() == "INR"
 
     # Base pricing per night based on style and refinement (in base USD units, then scaled)
