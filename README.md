@@ -208,6 +208,7 @@ If a production deployment encounters issues:
 
 ## 📚 Presentation & Documentation Links
 
+- [How TRIPPY Works: Complete Walkthrough](docs/how-trippy-works.md)
 - [System Architecture Specification](docs/architecture.md)
 - [Teacher Presentation Script (5–7 min)](docs/demo-script.md)
 - [Comprehensive Test Report](docs/test-report.md)
