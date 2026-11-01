@@ -72,7 +72,13 @@ class DestinationAgent(TrippyAgent):
         # 2. If AI provider available, optionally refine narrative
         if llm_service.is_available():
             try:
+                user_fixed = (
+                    f"The user has explicitly chosen destination: '{preferences.destinations[0]}'. "
+                    f"You MUST set selected_destination to '{preferences.destinations[0]}' and candidate 0 name to '{preferences.destinations[0]}'.\n"
+                    if preferences.destinations else ""
+                )
                 prompt = (
+                    f"{user_fixed}"
                     f"Traveler from {preferences.origin} planning a {duration_days}-day {preferences.travel_style.value} trip.\n"
                     f"Interests: {preferences.interests}.\n"
                     f"Budget max: {preferences.budget_max} {preferences.currency}.\n"
@@ -82,6 +88,9 @@ class DestinationAgent(TrippyAgent):
                 system = f"You are the {self.role}. {self.backstory}"
                 ai_res = await llm_service.generate_structured(prompt, system, DestinationAgentOutput)
                 if ai_res and ai_res.candidates:
+                    if preferences.destinations:
+                        ai_res.selected_destination = preferences.destinations[0]
+                        ai_res.candidates[0].name = preferences.destinations[0]
                     return ai_res
             except Exception:
                 pass

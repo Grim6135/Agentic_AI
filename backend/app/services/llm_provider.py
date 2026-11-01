@@ -51,14 +51,25 @@ class LLMProviderService:
         Attempts to generate a structured JSON response matching schema_cls.
         Returns None on any error, timeout, or failure so callers fall back cleanly.
         """
-        if not self.is_available():
-            return None
+        schema_json = json.dumps(schema_cls.model_json_schema())
+        augmented_system = (
+            f"{system_instruction}\n\n"
+            f"CRITICAL REQUIREMENT: You MUST respond ONLY with valid, parseable JSON conforming strictly to this JSON Schema:\n"
+            f"{schema_json}"
+        )
 
         try:
-            if self.provider == "gemini":
-                return await self._call_gemini(prompt, system_instruction, schema_cls)
-            elif self.provider == "openai":
-                return await self._call_openai(prompt, system_instruction, schema_cls)
+            # Auto-detect groq key format if provider is not explicitly groq
+            effective_provider = self.provider
+            if self.api_key.startswith("gsk_"):
+                effective_provider = "groq"
+
+            if effective_provider == "groq":
+                return await self._call_groq(prompt, augmented_system, schema_cls)
+            elif effective_provider == "gemini":
+                return await self._call_gemini(prompt, augmented_system, schema_cls)
+            elif effective_provider == "openai":
+                return await self._call_openai(prompt, augmented_system, schema_cls)
             else:
                 logger.warning(f"Unknown AI provider configured: {self.provider}")
                 return None
@@ -133,6 +144,47 @@ class LLMProviderService:
             "model": self.model,
             "messages": [
                 {"role": "system", "content": f"{system_instruction}\nYou MUST respond with valid JSON matching {schema_cls.__name__}."},
+                {"role": "user", "content": prompt},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.2,
+        }
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+
+            choices = data.get("choices", [])
+            if not choices:
+                return None
+            text = choices[0].get("message", {}).get("content", "")
+            parsed = json.loads(text)
+            return schema_cls.model_validate(parsed)
+
+    async def _call_groq(
+        self,
+        prompt: str,
+        system_instruction: str,
+        schema_cls: Type[T],
+    ) -> Optional[T]:
+        """Calls the Groq OpenAI-compatible Chat Completions API with json_object enforcement."""
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        # Groq model fallback if user didn't specify or specified invalid
+        model_name = self.model if self.model and not self.model.startswith("gemini") else "openai/gpt-oss-120b"
+
+        payload: Dict[str, Any] = {
+            "model": model_name,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": f"{system_instruction}\nYou MUST respond strictly with valid JSON conforming to the schema of {schema_cls.__name__}.",
+                },
                 {"role": "user", "content": prompt},
             ],
             "response_format": {"type": "json_object"},

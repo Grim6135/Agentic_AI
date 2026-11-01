@@ -115,8 +115,8 @@ class OSRMRouteProvider(RouteProvider):
 
         direct_dist = haversine_distance_km(coord1, coord2)
 
-        # For domestic / overland distances under 1,200 km, attempt OSRM road query
-        if direct_dist <= 1200.0:
+        # For domestic / overland distances under 1,200 km, attempt OSRM road query when not explicitly flight
+        if mode != "flight" and direct_dist <= 1200.0:
             try:
                 lon1, lat1 = coord1[1], coord1[0]
                 lon2, lat2 = coord2[1], coord2[0]

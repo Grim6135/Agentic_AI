@@ -62,16 +62,23 @@ class StayActivityAgent(TrippyAgent):
 
         if llm_service.is_available() and refinement_level == 0:
             try:
+                curr_sym = "₹" if preferences.currency.upper() == "INR" else ("€" if preferences.currency.upper() == "EUR" else ("£" if preferences.currency.upper() == "GBP" else "$"))
                 prompt = (
-                    f"Curate stay, activities, and food in {destination} for a {duration_days}-day trip.\n"
-                    f"Style: {preferences.travel_style.value}. Travelers: {preferences.travelers}.\n"
+                    f"Curate authentic accommodation, daily activities, and dining in {destination} for a {duration_days}-day trip.\n"
+                    f"Style: {preferences.travel_style.value}. Travelers: {preferences.travelers}. Currency: {preferences.currency.upper()} ({curr_sym}).\n"
                     f"Interests: {preferences.interests}.\n"
-                    f"Baseline accommodation: {deterministic_output.accommodation_name} "
-                    f"(${deterministic_output.cost_per_night:.2f}/night)."
+                    f"CRITICAL: 'activities' MUST contain exactly {duration_days} items (one primary activity per day of the trip).\n"
+                    f"CRITICAL: All prices (cost_per_night, total_accommodation_cost, cost_estimate, daily_food_cost, total_food_cost) MUST be in {preferences.currency.upper()} ({curr_sym}) with realistic local rates for {destination}.\n"
+                    f"Baseline reference: {deterministic_output.accommodation_name} ({curr_sym}{deterministic_output.cost_per_night:.2f}/night)."
                 )
                 system = f"You are the {self.role}. {self.backstory}"
                 ai_res = await llm_service.generate_structured(prompt, system, StayActivityAgentOutput)
                 if ai_res and ai_res.activities:
+                    if len(ai_res.activities) > duration_days:
+                        ai_res.activities = ai_res.activities[:duration_days]
+                    elif len(ai_res.activities) < duration_days:
+                        needed = duration_days - len(ai_res.activities)
+                        ai_res.activities.extend(deterministic_output.activities[:needed])
                     return ai_res
             except Exception:
                 pass

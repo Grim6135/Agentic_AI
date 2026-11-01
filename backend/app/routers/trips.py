@@ -10,7 +10,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas import TripPreferences, TripResult
-from app.services import trip_service
+from app.services import location_verifier, trip_service
 from app.storage import trip_repository
 
 router = APIRouter(prefix="/trips", tags=["trips"])
@@ -20,14 +20,33 @@ router = APIRouter(prefix="/trips", tags=["trips"])
 async def plan_trip(preferences: TripPreferences) -> TripResult:
     """
     Accept traveler preferences and return a full AI-planned trip.
-
-    Orchestrates the five CrewAI specialist agents:
-    1. Destination Agent: ranks candidates based on preferences and style.
-    2. Transport Agent: estimates routing, durations, and costs.
-    3. Stay & Activity Agent: curates accommodations, activities, and dining.
-    4. Budget Agent: deterministically calculates budget and proposes reductions.
-    5. Itinerary Agent: synthesizes final day-by-day itinerary.
+    Validates geographical locations and realistic monetary constraints before planning.
     """
+    # 1. Verify origin location exists on Earth
+    orig_check = await location_verifier.verify_location(preferences.origin)
+    if not orig_check.is_valid:
+        raise HTTPException(
+            status_code=422,
+            detail=orig_check.error_message or f"Invalid origin: '{preferences.origin}' is not a recognized city or destination.",
+        )
+
+    # 2. Verify destination locations exist on Earth
+    if preferences.destinations:
+        for dest in preferences.destinations:
+            dest_check = await location_verifier.verify_location(dest)
+            if not dest_check.is_valid:
+                raise HTTPException(
+                    status_code=422,
+                    detail=dest_check.error_message or f"Invalid destination: '{dest}' is not a recognized city or destination.",
+                )
+
+    # 3. Monetary sanity check
+    if preferences.budget_max is not None and preferences.budget_max <= 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Budget limit must be greater than 0.",
+        )
+
     return await trip_service.plan_trip(preferences)
 
 

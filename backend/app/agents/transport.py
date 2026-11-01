@@ -48,15 +48,36 @@ class TransportAgent(TrippyAgent):
 
         if llm_service.is_available() and refinement_level == 0:
             try:
+                curr_sym = "₹" if preferences.currency.upper() == "INR" else ("€" if preferences.currency.upper() == "EUR" else ("£" if preferences.currency.upper() == "GBP" else "$"))
                 prompt = (
-                    f"Estimate transport from {preferences.origin} to {destination} for {preferences.travelers} traveler(s).\n"
+                    f"Estimate realistic round-trip transit from {preferences.origin} to {destination} for {preferences.travelers} traveler(s).\n"
                     f"Mode: {preferences.preferred_transport.value}. Style: {preferences.travel_style.value}.\n"
-                    f"Baseline total estimate: ${deterministic_output.total_cost:.2f} {preferences.currency}."
+                    f"Currency: {preferences.currency.upper()} ({curr_sym}).\n"
+                    f"CRITICAL: 'legs' MUST contain exactly 2 TransportLeg items: one outbound leg ({preferences.origin} -> {destination}) "
+                    f"and one return leg ({destination} -> {preferences.origin}).\n"
+                    f"CRITICAL: All cost_estimate and total_cost numbers MUST be in {preferences.currency.upper()} ({curr_sym}) representing realistic fares.\n"
+                    f"Baseline estimate: {curr_sym}{deterministic_output.total_cost:.2f} {preferences.currency}."
                 )
                 system = f"You are the {self.role}. {self.backstory}"
                 ai_res = await llm_service.generate_structured(prompt, system, TransportAgentOutput)
                 if ai_res and ai_res.legs:
-                    return ai_res
+                    if len(ai_res.legs) == 1:
+                        # Auto-mirror return leg if LLM only provided outbound leg
+                        outbound = ai_res.legs[0]
+                        from app.schemas.trip import TransportLeg
+                        return_leg = TransportLeg(
+                            mode=outbound.mode,
+                            origin=outbound.destination,
+                            destination=outbound.origin,
+                            departure_time="Return date afternoon",
+                            arrival_time="Return date evening",
+                            cost_estimate=outbound.cost_estimate,
+                            notes=f"Return leg ({outbound.destination} to {outbound.origin})",
+                        )
+                        ai_res.legs.append(return_leg)
+                        ai_res.total_cost = round(outbound.cost_estimate * 2, 2)
+                    if len(ai_res.legs) == 2:
+                        return ai_res
             except Exception:
                 pass
 

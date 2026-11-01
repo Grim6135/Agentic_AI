@@ -46,9 +46,9 @@ class Settings(BaseSettings):
 
     # AI Provider configuration (server-side only)
     ai_enabled: bool = False
-    ai_provider: str = "gemini"  # "gemini" | "openai"
+    ai_provider: str = "groq"  # "groq" | "gemini" | "openai"
     ai_api_key: str = ""
-    ai_model: str = ""
+    ai_model: str = "openai/gpt-oss-120b"
     ai_timeout_seconds: float = 15.0
 
     # RAG Configuration
