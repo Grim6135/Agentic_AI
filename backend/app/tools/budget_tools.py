@@ -16,6 +16,7 @@ def calculate_itemized_budget(
     activities_cost: float,
     food_cost: float,
     misc_rate: float = 0.08,
+    currency: str = "USD",
 ) -> BudgetBreakdown:
     """
     Deterministically computes itemized budget breakdown with contingency.
@@ -30,6 +31,7 @@ def calculate_itemized_budget(
     total = round(subtotal + misc, 2)
 
     return BudgetBreakdown(
+        currency=currency,
         transport=transport,
         accommodation=accommodation,
         activities=activities,

@@ -110,6 +110,7 @@ class DayPlan(BaseModel):
 
 
 class BudgetBreakdown(BaseModel):
+    currency: str = "USD"
     transport: float = 0.0
     accommodation: float = 0.0
     activities: float = 0.0
@@ -127,6 +128,7 @@ class TripResult(BaseModel):
     trip_id: str = Field(..., examples=["trip_abc123"])
     preferences: TripPreferences
     destinations: list[str]
+    currency: str = Field(default="USD")
     itinerary: list[DayPlan] = Field(default_factory=list)
     budget: BudgetBreakdown = Field(default_factory=BudgetBreakdown)
     summary: str = Field(default="", description="Human-readable trip summary.")

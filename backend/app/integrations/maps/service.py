@@ -30,7 +30,15 @@ CITY_COORDINATES: Dict[str, Tuple[float, float]] = {
     "jakarta": (-6.2088, 106.8456),
     "new delhi": (28.6139, 77.2090),
     "delhi": (28.6139, 77.2090),
+    "kasol": (32.0100, 77.3150),
+    "manali": (32.2432, 77.1892),
+    "shimla": (31.1048, 77.1734),
+    "chandigarh": (30.7333, 76.7794),
+    "goa": (15.2993, 74.1240),
+    "jaipur": (26.9124, 75.7873),
     "mumbai": (19.0760, 72.8777),
+    "bangalore": (12.9716, 77.5946),
+    "bengaluru": (12.9716, 77.5946),
     "barcelona": (41.3851, 2.1734),
     "madrid": (40.4168, -3.7038),
     "berlin": (52.5200, 13.4050),
@@ -78,17 +86,33 @@ class OSRMRouteProvider(RouteProvider):
     def __init__(self, timeout: float = 5.0):
         self.timeout = timeout
 
+    async def _geocode(self, location: str) -> Optional[Tuple[float, float]]:
+        loc_clean = location.split(",")[0].strip().lower()
+        for k, v in CITY_COORDINATES.items():
+            if k in location.lower() or k in loc_clean:
+                return v
+
+        try:
+            url = f"https://geocoding-api.open-meteo.com/v1/search?name={loc_clean}&count=1&language=en&format=json"
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                res = await client.get(url)
+                if res.status_code == 200:
+                    data = res.json().get("results", [])
+                    if data:
+                        return (float(data[0]["latitude"]), float(data[0]["longitude"]))
+        except Exception:
+            pass
+        return None
+
     async def get_route(
         self, origin: str, destination: str, mode: str = "mixed"
     ) -> Optional[RouteEstimate]:
-        orig_key = next((k for k in CITY_COORDINATES if k in origin.lower()), None)
-        dest_key = next((k for k in CITY_COORDINATES if k in destination.lower()), None)
+        coord1 = await self._geocode(origin)
+        coord2 = await self._geocode(destination)
 
-        if not orig_key or not dest_key:
+        if not coord1 or not coord2:
             return None
 
-        coord1 = CITY_COORDINATES[orig_key]
-        coord2 = CITY_COORDINATES[dest_key]
         direct_dist = haversine_distance_km(coord1, coord2)
 
         # For domestic / overland distances under 1,200 km, attempt OSRM road query
@@ -118,6 +142,19 @@ class OSRMRouteProvider(RouteProvider):
                             )
             except Exception as e:
                 logger.debug(f"OSRM road routing fallback to geodesic: {e}")
+
+            est_km = round(direct_dist * 1.28, 1)
+            est_hrs = round(est_km / 55.0, 1)
+            return RouteEstimate(
+                origin=origin,
+                destination=destination,
+                distance_km=est_km,
+                duration_hours=est_hrs,
+                mode="road / train",
+                is_live=False,
+                provider_name="Geodesic Regional Transit Baseline",
+                route_summary=f"Estimated overland route: ~{est_km} km (~{est_hrs}h transit) between {origin} and {destination}.",
+            )
 
         # Intercontinental / Flight estimation based on verified geodesic coordinates
         flight_hrs = round((direct_dist / 800.0) + 1.5, 1)  # 800 km/h cruising + buffer

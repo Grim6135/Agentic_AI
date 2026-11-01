@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { planTrip } from '../api';
 import type { TripPreferences, TripResult } from '../api';
 
-
 interface PlannerModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -14,6 +13,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
   const [startDate, setStartDate] = useState('2026-11-15');
   const [endDate, setEndDate] = useState('2026-11-20');
   const [budgetMax, setBudgetMax] = useState<number | ''>(2500);
+  const [currency, setCurrency] = useState('USD');
   const [travelers, setTravelers] = useState(2);
   const [travelStyle, setTravelStyle] = useState('cultural');
   const [preferredTransport, setPreferredTransport] = useState('mixed');
@@ -35,6 +35,23 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
 
   if (!isOpen) return null;
 
+  const getCurrencySymbol = (curr?: string) => {
+    switch (curr?.toUpperCase()) {
+      case 'INR':
+        return '₹';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      case 'JPY':
+        return '¥';
+      default:
+        return '$';
+    }
+  };
+
+  const currSymbol = getCurrencySymbol(result?.currency || result?.budget?.currency || currency);
+
   const handleCopyId = () => {
     if (result) {
       if (navigator.clipboard) {
@@ -43,6 +60,25 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleApplyPreset = (
+    orig: string,
+    dest: string,
+    curr: string,
+    budget: number,
+    style: string,
+    transport: string,
+    keywords: string,
+  ) => {
+    setOrigin(orig);
+    setDestination(dest);
+    setCurrency(curr);
+    setBudgetMax(budget);
+    setTravelStyle(style);
+    setPreferredTransport(transport);
+    setInterests(keywords);
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +92,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
       start_date: startDate,
       end_date: endDate,
       budget_max: budgetMax !== '' ? Number(budgetMax) : null,
+      currency: currency,
       travelers: Number(travelers),
       travel_style: travelStyle,
       preferred_transport: preferredTransport,
@@ -100,6 +137,100 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
         {/* Content */}
         {!result ? (
           <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+            {/* Quick Presets */}
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10">
+              <span className="text-[11px] font-semibold text-surface-100/60 uppercase tracking-wider block mb-2">
+                ⚡ Quick Trip Presets:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset(
+                      'Tokyo, Japan',
+                      'Kyoto, Japan',
+                      'USD',
+                      2800,
+                      'cultural',
+                      'train',
+                      'temples, matcha, history, zen gardens',
+                    )
+                  }
+                  className="text-xs px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all cursor-pointer"
+                >
+                  🇯🇵 Kyoto Cultural ($)
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset(
+                      'New Delhi, India',
+                      'Kasol, India',
+                      'INR',
+                      22000,
+                      'adventure',
+                      'bus',
+                      'trekking, parvati river, cafes, pine trails',
+                    )
+                  }
+                  className="text-xs px-3 py-1.5 rounded-xl bg-primary-600/30 hover:bg-primary-600/50 border border-primary-500/40 text-primary-200 transition-all cursor-pointer"
+                >
+                  🇮🇳 Kasol Parvati Trail (₹)
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset(
+                      'Milan, Italy',
+                      'Rome, Italy',
+                      'EUR',
+                      2200,
+                      'cultural',
+                      'train',
+                      'colosseum, vatican, pasta, architecture',
+                    )
+                  }
+                  className="text-xs px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all cursor-pointer"
+                >
+                  🇮🇹 Rome Highlights (€)
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset(
+                      'London, UK',
+                      'Paris, France',
+                      'EUR',
+                      1800,
+                      'romantic',
+                      'train',
+                      'louvre, eiffel tower, cafes, pastry',
+                    )
+                  }
+                  className="text-xs px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all cursor-pointer"
+                >
+                  🇫🇷 Paris Romance (€)
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset(
+                      'Jakarta, Indonesia',
+                      'Bali, Indonesia',
+                      'USD',
+                      1900,
+                      'relaxation',
+                      'flight',
+                      'beaches, ubud rice terraces, snorkeling, temples',
+                    )
+                  }
+                  className="text-xs px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all cursor-pointer"
+                >
+                  🇮🇩 Bali Wellness ($)
+                </button>
+              </div>
+            </div>
+
             {error && (
               <div
                 role="alert"
@@ -143,7 +274,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-primary-500"
-                  placeholder="Leave empty for AI suggestions"
+                  placeholder="e.g. Kasol, India (or leave empty for AI selection)"
                 />
               </div>
 
@@ -175,7 +306,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
 
               <div>
                 <label className="block text-xs font-semibold text-surface-100/70 mb-1">
-                  Maximum Budget (USD)
+                  Maximum Budget ({currSymbol})
                 </label>
                 <input
                   type="number"
@@ -183,8 +314,25 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                   value={budgetMax}
                   onChange={(e) => setBudgetMax(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-primary-500"
-                  placeholder="e.g. 2500"
+                  placeholder={currency === 'INR' ? 'e.g. 25000' : 'e.g. 2500'}
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-surface-100/70 mb-1">
+                  Currency
+                </label>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-surface-800 border border-white/10 text-white focus:outline-none focus:border-primary-500"
+                >
+                  <option value="USD">USD ($ - US Dollar)</option>
+                  <option value="INR">INR (₹ - Indian Rupee)</option>
+                  <option value="EUR">EUR (€ - Euro)</option>
+                  <option value="GBP">GBP (£ - British Pound)</option>
+                  <option value="JPY">JPY (¥ - Japanese Yen)</option>
+                </select>
               </div>
 
               <div>
@@ -220,7 +368,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                 </select>
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-surface-100/70 mb-1">
                   Preferred Transport
                 </label>
@@ -229,7 +377,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                   onChange={(e) => setPreferredTransport(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl bg-surface-800 border border-white/10 text-white focus:outline-none focus:border-primary-500"
                 >
-                  <option value="mixed">Mixed (Flight / Train)</option>
+                  <option value="mixed">Mixed (Flight / Train / Bus)</option>
                   <option value="flight">Flight</option>
                   <option value="train">Train</option>
                   <option value="bus">Bus / Coach</option>
@@ -247,7 +395,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                 value={interests}
                 onChange={(e) => setInterests(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-primary-500"
-                placeholder="e.g. history, street food, photography, temples"
+                placeholder="e.g. trekking, rivers, cafes, local culture"
               />
             </div>
 
@@ -318,35 +466,35 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
               {/* Weather Forecast */}
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 font-semibold text-sm">
+                  <span className="text-xs font-semibold text-surface-100/80 flex items-center gap-1.5">
                     <span>🌦️</span> Weather Forecast
-                  </div>
-                  {result.weather ? (
+                  </span>
+                  {result.weather && (
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
                         result.weather.is_live
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                          : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                       }`}
                     >
-                      {result.weather.is_live ? '🟢 Verified Live' : '🟡 Estimated Climatology'}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-gray-500/20 text-gray-300 border border-gray-500/40">
-                      Unavailable
+                      {result.weather.is_live ? '🟢 Verified Live' : 'Estimated Seasonal'}
                     </span>
                   )}
                 </div>
 
                 {result.weather ? (
-                  <div className="space-y-1.5 text-xs text-surface-100/70">
+                  <div className="space-y-1 text-xs text-surface-100/70">
                     <p className="text-white font-medium text-sm">
                       {result.weather.temperature_c}°C — {result.weather.condition}
                     </p>
-                    <p>Precipitation chance: {result.weather.precipitation_chance}%</p>
-                    <p className="text-surface-100/60 leading-relaxed">{result.weather.summary}</p>
+                    <p className="text-[11px] text-surface-100/60">
+                      Precipitation chance: {result.weather.precipitation_chance}%
+                    </p>
+                    <p className="text-surface-100/60 leading-relaxed pt-1">
+                      {result.weather.summary}
+                    </p>
                     <p className="text-[10px] text-surface-100/40 pt-1">
-                      Source: {result.weather.provider_name} ({result.weather.recorded_at})
+                      Source: {result.weather.provider_name}
                     </p>
                   </div>
                 ) : (
@@ -356,25 +504,21 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                 )}
               </div>
 
-              {/* Route & Distance */}
+              {/* Transit & Routing */}
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 font-semibold text-sm">
+                  <span className="text-xs font-semibold text-surface-100/80 flex items-center gap-1.5">
                     <span>🗺️</span> Transit & Route Estimate
-                  </div>
-                  {result.route_estimate ? (
+                  </span>
+                  {result.route_estimate && (
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
                         result.route_estimate.is_live
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                          : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                       }`}
                     >
-                      {result.route_estimate.is_live ? '🟢 Verified Route' : '🟡 Estimated Matrix'}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-gray-500/20 text-gray-300 border border-gray-500/40">
-                      Unavailable
+                      {result.route_estimate.is_live ? '🟢 Verified Route' : 'Estimated Baseline'}
                     </span>
                   )}
                 </div>
@@ -444,7 +588,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
             <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold text-surface-100/80">
-                  Itemized Deterministic Budget
+                  Itemized Deterministic Budget ({currSymbol})
                 </span>
                 <span className="text-xs text-amber-300/80 italic">
                   *Curated prices remain estimates unless verified live
@@ -453,27 +597,27 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                 <div className="bg-white/5 p-2.5 rounded-xl">
                   <span className="text-surface-100/50 block text-[10px]">Transport</span>
-                  <span className="font-semibold text-white">${result.budget.transport.toFixed(2)}</span>
+                  <span className="font-semibold text-white">{currSymbol}{result.budget.transport.toFixed(2)}</span>
                 </div>
                 <div className="bg-white/5 p-2.5 rounded-xl">
                   <span className="text-surface-100/50 block text-[10px]">Lodging</span>
-                  <span className="font-semibold text-white">${result.budget.accommodation.toFixed(2)}</span>
+                  <span className="font-semibold text-white">{currSymbol}{result.budget.accommodation.toFixed(2)}</span>
                 </div>
                 <div className="bg-white/5 p-2.5 rounded-xl">
                   <span className="text-surface-100/50 block text-[10px]">Activities</span>
-                  <span className="font-semibold text-white">${result.budget.activities.toFixed(2)}</span>
+                  <span className="font-semibold text-white">{currSymbol}{result.budget.activities.toFixed(2)}</span>
                 </div>
                 <div className="bg-white/5 p-2.5 rounded-xl">
                   <span className="text-surface-100/50 block text-[10px]">Dining (Est.)</span>
-                  <span className="font-semibold text-white">${result.budget.food_estimate.toFixed(2)}</span>
+                  <span className="font-semibold text-white">{currSymbol}{result.budget.food_estimate.toFixed(2)}</span>
                 </div>
                 <div className="bg-white/5 p-2.5 rounded-xl">
                   <span className="text-surface-100/50 block text-[10px]">Misc (8%)</span>
-                  <span className="font-semibold text-white">${result.budget.miscellaneous.toFixed(2)}</span>
+                  <span className="font-semibold text-white">{currSymbol}{result.budget.miscellaneous.toFixed(2)}</span>
                 </div>
                 <div className="bg-primary-600/20 border border-primary-500/30 p-2.5 rounded-xl">
                   <span className="text-primary-300 block text-[10px] font-semibold">Total</span>
-                  <span className="font-bold text-white text-sm">${result.budget.total.toFixed(2)}</span>
+                  <span className="font-bold text-white text-sm">{currSymbol}{result.budget.total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -491,7 +635,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                       <span>Day {day.day} — {day.date}</span>
                       {day.daily_budget && (
                         <span className="text-surface-100/50 font-normal">
-                          Daily Target: ${day.daily_budget.toFixed(2)}
+                          Daily Target: {currSymbol}{day.daily_budget.toFixed(2)}
                         </span>
                       )}
                     </div>
@@ -499,7 +643,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                     {/* Accommodation */}
                     {day.accommodation && (
                       <p className="text-xs text-surface-100/70 mb-1.5">
-                        🏨 <strong>Stay:</strong> {day.accommodation.name} (${day.accommodation.cost_per_night}/night)
+                        🏨 <strong>Stay:</strong> {day.accommodation.name} ({currSymbol}{day.accommodation.cost_per_night}/night)
                       </p>
                     )}
 
@@ -520,7 +664,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                         {day.activities.map((act, idx) => (
                           <div key={idx} className="flex justify-between gap-2">
                             <span>• {act.name} ({act.duration_hours}h)</span>
-                            <span className="text-surface-100/50">${act.cost_estimate ?? 0}</span>
+                            <span className="text-surface-100/50">{currSymbol}{act.cost_estimate ?? 0}</span>
                           </div>
                         ))}
                       </div>
@@ -533,16 +677,18 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
             {/* Footer action */}
             <div className="pt-4 flex justify-between items-center border-t border-white/10">
               <button
+                type="button"
                 onClick={() => setResult(null)}
-                className="px-4 py-2 rounded-xl border border-white/10 text-xs text-surface-100/70 hover:text-white transition-colors cursor-pointer"
+                className="text-xs text-surface-100/60 hover:text-white transition-colors cursor-pointer"
               >
                 ← Plan Another Trip
               </button>
               <button
+                type="button"
                 onClick={onClose}
-                className="px-6 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-xs font-semibold text-white transition-all cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition-colors cursor-pointer"
               >
-                Close Itinerary
+                Done
               </button>
             </div>
           </div>

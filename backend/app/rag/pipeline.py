@@ -255,30 +255,42 @@ class RAGKnowledgeBase:
         if self.collection.count() == 0:
             return []
 
-        where_filter = None
-        if destination:
-            # Check for city name match in metadata
-            where_filter = {"destination": destination}
+        city_clean = destination.split(",")[0].strip() if destination else None
+        results = None
 
-        try:
-            results = self.collection.query(
-                query_texts=[query],
-                n_results=min(top_k, self.collection.count()),
-                where=where_filter if where_filter else None,
-            )
-        except Exception as e:
-            # If filtered query returns no results or fails, retry without where filter
-            logger.debug(f"Chroma query with filter failed, retrying unfiltered: {e}")
+        if destination:
+            # 1. Try exact destination filter
+            try:
+                results = self.collection.query(
+                    query_texts=[query],
+                    n_results=min(top_k, self.collection.count()),
+                    where={"destination": destination},
+                )
+            except Exception:
+                results = None
+
+            # 2. Try city name filter
+            if (not results or not results.get("documents") or not results["documents"][0]) and city_clean and city_clean != destination:
+                try:
+                    results = self.collection.query(
+                        query_texts=[query],
+                        n_results=min(top_k, self.collection.count()),
+                        where={"destination": city_clean},
+                    )
+                except Exception:
+                    results = None
+
+        # 3. If no destination filter was requested, query standard
+        if not destination:
             try:
                 results = self.collection.query(
                     query_texts=[query],
                     n_results=min(top_k, self.collection.count()),
                 )
-            except Exception as e2:
-                logger.warning(f"Chroma query error: {e2}")
+            except Exception as e:
+                logger.warning(f"Chroma query error: {e}")
                 return []
 
-        passages: List[RetrievedPassage] = []
         if not results or not results.get("documents") or not results["documents"][0]:
             return []
 
@@ -286,16 +298,27 @@ class RAGKnowledgeBase:
         metas = results["metadatas"][0] if results.get("metadatas") else []
         distances = results["distances"][0] if results.get("distances") else []
 
+        passages: List[RetrievedPassage] = []
         for idx, doc_text in enumerate(docs):
             meta = metas[idx] if idx < len(metas) else {}
             dist = distances[idx] if idx < len(distances) else 1.0
+            doc_dest = meta.get("destination", "General")
+
+            # Strict destination guard: If a destination was requested, ensure the document belongs to it
+            if destination:
+                dest_lower = destination.lower()
+                doc_dest_lower = doc_dest.lower()
+                city_lower = (city_clean or "").lower()
+                if not (city_lower in doc_dest_lower or doc_dest_lower in dest_lower):
+                    continue
+
             # Convert cosine distance to approximate similarity score
             score = max(0.0, round(1.0 - (dist / 2.0), 3))
 
             passages.append(
                 RetrievedPassage(
                     text=doc_text,
-                    destination=meta.get("destination", destination or "General"),
+                    destination=doc_dest,
                     source=meta.get("source", "Verified Curated Guidebook"),
                     section=meta.get("section", "Overview"),
                     category=meta.get("category", "General"),

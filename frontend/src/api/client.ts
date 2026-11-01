@@ -159,6 +159,7 @@ export interface DayPlan {
 }
 
 export interface BudgetBreakdown {
+  currency?: string;
   transport: number;
   accommodation: number;
   activities: number;
@@ -186,6 +187,7 @@ export interface TripResult {
   trip_id: string;
   preferences: TripPreferences;
   destinations: string[];
+  currency?: string;
   itinerary: DayPlan[];
   budget: BudgetBreakdown;
   summary: string;

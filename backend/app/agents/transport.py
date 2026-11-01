@@ -43,6 +43,7 @@ class TransportAgent(TrippyAgent):
             travelers=preferences.travelers,
             travel_style=preferences.travel_style,
             refinement_level=refinement_level,
+            currency=preferences.currency,
         )
 
         if llm_service.is_available() and refinement_level == 0:

@@ -80,18 +80,25 @@ class TrippyCrew:
 
         # 4. RAG Retrieval for Selected Destination Details
         stay_passages = []
+        city_prefix = selected_dest.split(",")[0].strip().lower()
         try:
-            city_prefix = selected_dest.split(",")[0].strip()
             stay_query = f"{city_prefix} lodging hotels activities dining etiquette"
-            stay_passages = rag_service.retrieve(query=stay_query, top_k=4)
+            stay_passages = rag_service.retrieve(query=stay_query, destination=selected_dest, top_k=4)
         except Exception:
             stay_passages = []
 
-        all_rag_passages = dest_passages + stay_passages
-        rag_sources = list(dict.fromkeys(p.source for p in all_rag_passages if p.source))
+        # Only retain guidebook passages that explicitly belong to this destination
+        matching_passages = [
+            p for p in (stay_passages + dest_passages)
+            if p.destination and (
+                city_prefix in p.destination.lower()
+                or p.destination.lower() in selected_dest.lower()
+            )
+        ]
+        rag_sources = list(dict.fromkeys(p.source for p in matching_passages if p.source))
         destination_guidance = [
             f"[{p.section}] {p.text.strip()} (Source: {p.source})"
-            for p in all_rag_passages[:5]
+            for p in matching_passages[:5]
         ]
 
         # 5. External Integrations: Weather & Route Estimates
@@ -133,6 +140,7 @@ class TrippyCrew:
             accommodation_cost=stay_output.total_accommodation_cost,
             activities_cost=stay_output.total_activities_cost,
             food_cost=stay_output.total_food_cost,
+            currency=preferences.currency,
         )
 
         initial_total = breakdown.total
@@ -164,6 +172,7 @@ class TrippyCrew:
                 accommodation_cost=stay_output.total_accommodation_cost,
                 activities_cost=stay_output.total_activities_cost,
                 food_cost=stay_output.total_food_cost,
+                currency=preferences.currency,
             )
 
             # Re-validate with Budget Agent
@@ -175,17 +184,18 @@ class TrippyCrew:
 
         # Determine budget warnings / alternatives
         budget_warning: Optional[str] = None
+        curr_sym = "₹" if preferences.currency.upper() == "INR" else ("€" if preferences.currency.upper() == "EUR" else ("£" if preferences.currency.upper() == "GBP" else "$"))
         if not budget_output.is_within_budget:
             savings = round(initial_total - breakdown.total, 2)
             alt_dest = (
                 dest_output.candidates[1].name
                 if len(dest_output.candidates) > 1
-                else "Bali, Indonesia"
+                else "nearby regional destination"
             )
             budget_warning = (
-                f"Budget Advisory: Total cost of ${breakdown.total:.2f} {preferences.currency} "
-                f"exceeds your limit of ${preferences.budget_max:.2f} by ${budget_output.overflow_amount:.2f}. "
-                f"Two optimization cycles were applied (saving ${savings:.2f}). "
+                f"Budget Advisory: Total cost of {curr_sym}{breakdown.total:.2f} {preferences.currency} "
+                f"exceeds your limit of {curr_sym}{preferences.budget_max:.2f} by {curr_sym}{budget_output.overflow_amount:.2f}. "
+                f"Two optimization cycles were applied (saving {curr_sym}{savings:.2f}). "
                 f"Recommended alternatives: shift dates by 1-2 weeks, shorten duration, "
                 f"or consider budget destination '{alt_dest}'."
             )
@@ -210,6 +220,7 @@ class TrippyCrew:
             trip_id=trip_id,
             preferences=preferences,
             destinations=all_destinations,
+            currency=preferences.currency,
             itinerary=itinerary_output.days,
             budget=breakdown,
             summary=itinerary_output.summary,

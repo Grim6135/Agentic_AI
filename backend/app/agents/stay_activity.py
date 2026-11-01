@@ -47,6 +47,7 @@ class StayActivityAgent(TrippyAgent):
             travelers=preferences.travelers,
             interests=preferences.interests,
             refinement_level=refinement_level,
+            currency=preferences.currency,
         )
 
         # Incorporate RAG guidebook tips
