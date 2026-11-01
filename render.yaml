@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: trippy-backend
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health/ready
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        value: "https://trippy-frontend.vercel.app,http://localhost:5173"
+      - key: RAG_ENABLED
+        value: "true"
+      - key: RAG_PERSIST_DIR
+        value: ".chroma"
+      - key: STORAGE_DIR
+        value: ".data"
+      - key: WEATHER_PROVIDER
+        value: "open-meteo"
+      - key: MAPS_PROVIDER
+        value: "osrm"
+      - key: INTEGRATION_TIMEOUT_SECONDS
+        value: "5.0"
+      - key: INTEGRATION_CACHE_TTL_SECONDS
+        value: "600"
