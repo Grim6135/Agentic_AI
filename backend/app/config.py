@@ -21,14 +21,14 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # CORS
-    cors_origins: list[str] = [
+    cors_origins: Union[str, list[str]] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "*",
     ]
 
-    @field_validator("cors_origins", mode="before")
+    @field_validator("cors_origins")
     @classmethod
     def parse_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
         if isinstance(v, str):
