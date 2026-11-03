@@ -103,6 +103,8 @@ class TransportAgent(TrippyAgent):
                         )
                         ai_res.legs.append(return_leg)
                         ai_res.total_cost = round(outbound.cost_estimate * 2, 2)
+                    if not ai_res.alternatives:
+                        ai_res.alternatives = deterministic_output.alternatives
                     if len(ai_res.legs) == 2:
                         return ai_res
             except Exception:

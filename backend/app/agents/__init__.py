@@ -1,3 +1,4 @@
+from .adk_adapter import TrippyADKWorkflow, adk_workflow_service
 from .base import TrippyAgent
 from .budget import BudgetAgent
 from .crew import TrippyCrew
@@ -12,6 +13,8 @@ __all__ = [
     "ItineraryAgent",
     "StayActivityAgent",
     "TransportAgent",
+    "TrippyADKWorkflow",
     "TrippyAgent",
     "TrippyCrew",
+    "adk_workflow_service",
 ]

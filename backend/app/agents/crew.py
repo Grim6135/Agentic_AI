@@ -48,6 +48,31 @@ class TrippyCrew:
             self.itinerary_agent,
         ]
 
+    def as_crewai_crew(self) -> dict:
+        """
+        Exports the crew configuration as a CrewAI-compliant definition
+        specifying agents, tasks, and sequential execution pipeline.
+        """
+        return {
+            "agents": [ag.as_crewai_agent() for ag in self.agents],
+            "process": "sequential",
+            "verbose": True,
+            "tasks": [
+                {"name": "Select & Rank Destinations", "agent": "Destination Specialist"},
+                {"name": "Estimate Transit & Corridors", "agent": "Transport Specialist"},
+                {"name": "Curate Lodging & Activities", "agent": "Stay & Activity Specialist"},
+                {"name": "Validate & Optimize Itemized Budget", "agent": "Budget Specialist"},
+                {"name": "Synthesize Day-by-Day Itinerary", "agent": "Itinerary Specialist"},
+            ],
+        }
+
+    def as_adk_workflow(self):
+        """
+        Exports the Google Agent Development Kit (ADK) Workflow representation.
+        """
+        from app.agents.adk_adapter import adk_workflow_service
+        return adk_workflow_service.build_workflow()
+
     async def kickoff(self, preferences: TripPreferences) -> TripResult:
         """
         Executes the full TRIPPY agent planning workflow:

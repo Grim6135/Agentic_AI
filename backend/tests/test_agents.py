@@ -221,3 +221,44 @@ async def test_itinerary_agent_contract(sample_preferences):
     assert output.trip_title
     assert output.summary
     assert len(output.travel_tips) > 0
+
+
+# ─── 6. CrewAI & Google ADK Framework Tests ─────────────────────────────
+
+def test_crewai_framework_export():
+    from app.agents import TrippyCrew
+    crew = TrippyCrew()
+    crewai_spec = crew.as_crewai_crew()
+    assert "agents" in crewai_spec
+    assert len(crewai_spec["agents"]) == 5
+    assert crewai_spec["process"] == "sequential"
+    assert len(crewai_spec["tasks"]) == 5
+
+    # Check individual agent CrewAI contract
+    dest_spec = crew.destination_agent.as_crewai_agent()
+    assert dest_spec["role"] == "Destination Specialist"
+    assert "goal" in dest_spec
+    assert "backstory" in dest_spec
+    assert "tools" in dest_spec
+
+
+def test_google_adk_framework_export():
+    import google.adk as adk
+    from app.agents import TrippyCrew, adk_workflow_service
+    crew = TrippyCrew()
+
+    # Verify Google ADK Agent instances
+    adk_agent = crew.destination_agent.as_adk_agent()
+    assert isinstance(adk_agent, adk.Agent)
+    assert adk_agent.name == "DestinationSpecialist"
+    assert "Destination Specialist" in adk_agent.description
+
+    # Verify Google ADK Workflow instance
+    wf = crew.as_adk_workflow()
+    assert isinstance(wf, adk.Workflow)
+    assert wf.name == "TrippyMultiAgentPlanningWorkflow"
+
+    info = adk_workflow_service.get_framework_info()
+    assert info["status"] == "ready"
+    assert len(info["registered_agents"]) == 5
+
