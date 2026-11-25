@@ -83,7 +83,7 @@ def test_crewai_executes_five_tasks(monkeypatch, tmp_path):
             return "Final Answer: " + json.dumps(result)
 
     monkeypatch.setattr(
-        crewai, "LLM", lambda **_: FixtureModel(model="test", temperature=0)
+        "app.planning.specialists.specialist_model", lambda: FixtureModel(model="test", temperature=0)
     )
     result, events = run_specialists(
         {

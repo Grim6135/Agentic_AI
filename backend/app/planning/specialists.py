@@ -45,16 +45,18 @@ class Narrative(BaseModel):
     days: list[PlannedDay] = Field(min_length=1, max_length=30)
 
 
-def run_specialists(context: dict):
-    from crewai import LLM, Agent, Crew, Process, Task
+def specialist_model():
+    if settings.crew_model.startswith("groq/"):
+        from .groq_model import GroqChat
+        return GroqChat(settings.crew_model, settings.model_key(settings.crew_model))
+    from crewai import LLM
+    return LLM(model=settings.crew_model, api_key=settings.model_key(settings.crew_model), timeout=25, max_retries=0, temperature=0)
 
-    llm = LLM(
-        model=settings.crew_model,
-        api_key=settings.model_key(settings.crew_model),
-        timeout=25,
-        max_retries=0,
-        temperature=0,
-    )
+
+def run_specialists(context: dict):
+    from crewai import Agent, Crew, Process, Task
+
+    llm = specialist_model()
     agents, tasks, events = [], [], []
     started = time.monotonic()
     source = json.dumps(context, ensure_ascii=False)
