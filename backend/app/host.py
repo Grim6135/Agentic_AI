@@ -18,6 +18,10 @@ def main():
         raise SystemExit(
             "Set ADK_SERVICE_TOKEN and the selected model credentials before starting the host"
         )
+    if os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"):
+        # Only the public API receives the private research service binding.
+        entry = "app.main:app" if settings.research_service_url else "app.adk_service.server:adk_app"
+        os.execv(sys.executable, [sys.executable, "-m", "uvicorn", entry, "--host", "0.0.0.0", "--port", os.getenv("PORT", "80")])
     processes = []
 
     def stop(*_):

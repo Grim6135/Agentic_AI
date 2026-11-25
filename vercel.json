@@ -24,12 +24,7 @@
     },
     "research": {
       "root": "backend",
-      "entrypoint": "Dockerfile",
-      "command": [
-        "sh",
-        "-c",
-        "exec python -m uvicorn app.adk_service.server:adk_app --host 0.0.0.0 --port \"${PORT:-80}\""
-      ]
+      "entrypoint": "Containerfile"
     }
   },
   "rewrites": [
