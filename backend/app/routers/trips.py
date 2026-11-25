@@ -23,7 +23,12 @@ async def plan_trip(preferences: TripPreferences, request: Request, response: Re
         )
     if not settings.model_key(settings.crew_model) or not settings.adk_service_token:
         raise HTTPException(503, "The travel planning providers are not configured.")
-    if not store.admit(request.client.host if request.client else "unknown"):
+    try:
+        admitted = store.admit(request.client.host if request.client else "unknown")
+    except Exception as exc:
+        logging.getLogger("trippy").warning("Quota storage unavailable (%s)", type(exc).__name__)
+        raise HTTPException(503, "Trip storage is temporarily unavailable.") from None
+    if not admitted:
         raise HTTPException(429, "Planning limit reached. Try again in the next hour.")
     started = monotonic()
     try:

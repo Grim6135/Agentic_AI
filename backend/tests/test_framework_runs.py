@@ -32,13 +32,13 @@ async def test_adk_runner_invokes_tool_and_callbacks(monkeypatch):
             yield LlmResponse(content=types.Content(role="model", parts=[part]))
 
     async def coordinates(_):
-        return (35.0, 135.0)
+        return (35.0, 135.0), "Test geocoder"
 
     async def places(*_):
         return None
 
     monkeypatch.setattr(server, "adk_model", lambda: FixtureModel(model="fixture"))
-    monkeypatch.setattr("app.planning.geocode.resolve", coordinates)
+    monkeypatch.setattr("app.planning.geocode.locate", coordinates)
     monkeypatch.setattr("app.integrations.places_service.get_destination_info", places)
     prefs = TripPreferences(
         origin="Tokyo",

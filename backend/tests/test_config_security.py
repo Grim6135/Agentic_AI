@@ -3,6 +3,14 @@
 from app.config import Settings
 
 
+def test_research_binding_takes_precedence_over_local_fallback(monkeypatch):
+    monkeypatch.setenv("ADK_BASE_URL", "http://127.0.0.1:8001")
+    monkeypatch.setenv("RESEARCH_SERVICE_URL", "https://research.internal/preview/")
+    assert Settings(_env_file=None).research_base_url == "https://research.internal/preview"
+    monkeypatch.delenv("RESEARCH_SERVICE_URL")
+    assert Settings(_env_file=None).research_base_url == "http://127.0.0.1:8001"
+
+
 def test_cors_origins_parsing_from_comma_separated_string():
     """Settings should parse comma-separated CORS_ORIGINS string into a list."""
     s = Settings(cors_origins="https://trippy.vercel.app, https://trippy.onrender.com, http://localhost:5173")

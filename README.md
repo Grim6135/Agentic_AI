@@ -2,6 +2,10 @@
 
 TRIPPY builds a travel plan with a Google ADK research agent, five CrewAI specialists and an audited MCP tool session. The public planning endpoint uses these frameworks. The original Python specialist classes remain available to existing callers.
 
+## Deploy on Vercel
+
+Use the repository root and the Services preset. Connect PostgreSQL and configure the server-side secrets as described in [Deployment](docs/deployment.md).
+
 ## Run locally on Windows
 
 Use Python 3.12 and Node.js 24.15 or newer on the 24.x line. From the project root, install the backend and create its settings file. The last command preserves an existing configuration.

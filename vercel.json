@@ -1,0 +1,49 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite"
+    },
+    "backend": {
+      "root": "backend",
+      "entrypoint": "Dockerfile",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "research",
+          "format": "url",
+          "env": "RESEARCH_SERVICE_URL"
+        }
+      ],
+      "command": [
+        "sh",
+        "-c",
+        "exec python -m uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-80}\""
+      ]
+    },
+    "research": {
+      "root": "backend",
+      "entrypoint": "Dockerfile",
+      "command": [
+        "sh",
+        "-c",
+        "exec python -m uvicorn app.adk_service.server:adk_app --host 0.0.0.0 --port \"${PORT:-80}\""
+      ]
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ]
+}

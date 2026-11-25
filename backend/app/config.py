@@ -8,7 +8,7 @@ The application runs without any external services by default.
 import json
 from typing import Any, Union
 from dotenv import load_dotenv
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -46,6 +46,7 @@ class Settings(BaseSettings):
 
     # Storage & Persistence
     storage_dir: str = ".data"
+    database_url: SecretStr = SecretStr("")
 
     # AI Provider configuration (server-side only)
     ai_enabled: bool = False
@@ -60,6 +61,7 @@ class Settings(BaseSettings):
     crew_model: str = "groq/openai/gpt-oss-120b"
     adk_model: str = "groq/openai/gpt-oss-120b"
     adk_base_url: str = "http://127.0.0.1:8001"
+    research_service_url: str = ""
     adk_service_token: str = ""
     hourly_client_limit: int = Field(default=4, ge=1)
     hourly_global_limit: int = Field(default=20, ge=1)
@@ -77,6 +79,10 @@ class Settings(BaseSettings):
     integration_cache_ttl_seconds: int = 600
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra":"ignore"}
+
+    @property
+    def research_base_url(self) -> str:
+        return (self.research_service_url or self.adk_base_url).rstrip("/")
 
     def model_key(self, model: str) -> str:
         provider = model.partition("/")[0]

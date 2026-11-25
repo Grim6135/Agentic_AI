@@ -42,7 +42,7 @@ async def request_research(state):
     }
     async with research_client() as client:
         response = await client.post(
-            settings.adk_base_url.rstrip("/") + "/a2a",
+            settings.research_base_url + "/a2a",
             headers={"Authorization": "Bearer " + settings.adk_service_token},
             json={
                 "id": state.trip_id,
@@ -181,7 +181,7 @@ async def build_plan(p):
         evidence(
             state,
             "Geocoding",
-            "Open-Meteo geocoding",
+            data.get("geocoder", "Open-Meteo geocoding"),
             Status.LIVE,
             f"{city} - {data['latitude']:.3f}, {data['longitude']:.3f}",
         )

@@ -1,12 +1,12 @@
 # Deployment
 
-The prepared layout serves React on Vercel and both Python services on a single persistent container host. Only the FastAPI port needs an HTTPS ingress. ADK runs privately on loopback. The API worker is terminated on timeout. Planning stays inside the active request. Allow at least 250 seconds on the backend ingress.
+## Vercel Services
 
-## Hosting requirements
+Import this GitHub repository on the main branch with project root `./` and the Services preset. Vercel builds the Vite frontend and two Python containers. The browser calls `/api` on the same domain. Only the backend receives the internal research service URL through the `RESEARCH_SERVICE_URL` binding. Vercel sets this value automatically.
 
-Vercel Services can route multiple runtimes under one project. Vercel Functions expose temporary writable storage. Durable trip receipts, traces and hourly quotas in this build require a persistent SQLite volume. Built-in guide documents rebuild the Chroma index at startup. The official MCP client uses in-process protocol streams. An all-Vercel configuration would require an external durable store plus measured package size, memory, runtime and cold-start behavior. Those measurements require an actual account deployment.
+Connect a PostgreSQL database such as Neon through Vercel Storage. Make its pooled `DATABASE_URL` available to the backend. The first request initializes the tables. The database stores trips, hashed owner receipts, traces and hourly quotas across instances. Keep production and preview data separate.
 
-[Vercel Services](https://vercel.com/docs/services) · [Runtime filesystem](https://vercel.com/docs/functions/runtimes) · [Function limits](https://vercel.com/docs/functions/limitations)
+Set `GROQ_API_KEY` and a random shared `ADK_SERVICE_TOKEN` as server-side environment variables for the backend and research services. Leave `VITE_API_BASE_URL` unset for a same-origin deployment. Choose Node 24 for the frontend. After deployment, check `/api/health/ready` and submit a trip through the form. For local service routing, run `vercel dev` from the project root with Docker running.
 
 ## Existing container host
 

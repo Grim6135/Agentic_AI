@@ -30,7 +30,7 @@ async def health_ready() -> HealthReadyResponse:
         if not settings.model_key(settings.crew_model) or not settings.adk_service_token:
             raise RuntimeError("Missing model configuration")
         async with research_client() as client:
-            response = await client.get(settings.adk_base_url.rstrip("/")+"/a2a/agent-card",timeout=3)
+            response = await client.get(settings.research_base_url + "/a2a/agent-card", timeout=3)
             response.raise_for_status()
             if not response.json().get("skills"):
                 raise RuntimeError("Missing research capability")

@@ -94,6 +94,7 @@ async def test_card_and_rpc_auth(client):
             for path in ("/.well-known/agent.json", "/a2a/agent-card")
         ]
         assert cards[0] == cards[1] and cards[0]["skills"][0]["id"] == "research"
+        assert cards[0]["url"] == "http://research/a2a"
         req = {"id": "test", "jsonrpc": "2.0", "method": "unknown"}
         assert (await ac.post("/a2a", json=req)).status_code == 401
         rsp = await ac.post(

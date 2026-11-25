@@ -4,7 +4,7 @@ import secrets
 from time import monotonic
 from uuid import uuid4
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import ValidationError
 
 from app.config import settings
@@ -16,13 +16,13 @@ adk_app = FastAPI(title="TRIPPY destination research")
 
 @adk_app.get("/.well-known/agent.json")
 @adk_app.get("/a2a/agent-card")
-def card():
+def card(request: Request):
     return {
         "name": "TRIPPY Destination Research",
         "description": "Researches travel destinations",
         "version": "1.0.0",
         "protocolVersion": "0.2.0",
-        "url": settings.adk_base_url.rstrip("/") + "/a2a",
+        "url": str(request.url_for("research_rpc")),
         "capabilities": {"streaming": False},
         "defaultInputModes": ["application/json"],
         "defaultOutputModes": ["application/json"],
@@ -91,12 +91,13 @@ async def research(p: TripPreferences):
         city = clean(city, 200)
         if not city or len(findings) >= 2:
             raise ValueError("Research limit reached")
-        from app.planning.geocode import resolve
+        from app.planning.geocode import locate
 
-        coordinates = await resolve(city)
+        coordinates, geocoder = await locate(city)
         info = await places_service.get_destination_info(city, coordinates)
         findings[city] = {
             "destination": city,
+            "geocoder": geocoder,
             "latitude": coordinates[0],
             "longitude": coordinates[1],
             "summary": clean(info.summary) if info else "",
@@ -165,7 +166,7 @@ def rpc_error(identifier, code, message):
     }
 
 
-@adk_app.post("/a2a")
+@adk_app.post("/a2a", name="research_rpc")
 @adk_app.post("/a2a/tasks")
 async def rpc(body: dict, authorization: str = Header(default="")):
     authorized(authorization)
