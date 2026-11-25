@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import math
 import os
 import sys
@@ -78,6 +79,8 @@ async def execute_crew(context):
             stderr=asyncio.subprocess.DEVNULL,
             env={
                 **os.environ,
+                "HOME": tmp,
+                "XDG_CACHE_HOME": tmp,
                 "CREWAI_STORAGE_DIR": tmp,
                 "CREWAI_DISABLE_TELEMETRY": "true",
                 "CREWAI_TRACING_ENABLED": "false",
@@ -89,6 +92,8 @@ async def execute_crew(context):
             async with asyncio.timeout(155):
                 await proc.communicate(json.dumps(context).encode())
             if proc.returncode != 0:
+                failure = json.loads(output.read_text(encoding="utf-8")) if output.exists() else {}
+                logging.getLogger("trippy").warning("Itinerary worker exit=%s error=%s status=%s frames=%s", proc.returncode, failure.get("error"), failure.get("status"), failure.get("frames"))
                 raise RuntimeError("CrewAI planning unavailable")
             data = json.loads(output.read_text(encoding="utf-8"))
             return Narrative.model_validate(data["plan"]), [
