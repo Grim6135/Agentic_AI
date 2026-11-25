@@ -439,6 +439,7 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
               </button>
               <button
                 type="submit"
+                aria-label={loading ? 'Planning your itinerary' : 'Generate AI Itinerary'}
                 disabled={loading}
                 className="px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 font-semibold text-white shadow-glow transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >

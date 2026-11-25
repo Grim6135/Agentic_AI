@@ -11,7 +11,9 @@ async def resolve(city: str) -> tuple[float, float]:
     name, _, region = city.partition(",")
     region = region.strip().casefold()
     region = {"usa": "us", "uk": "gb"}.get(region, region)
-    async with httpx.AsyncClient(timeout=5) as client:
+    async with httpx.AsyncClient(
+        timeout=10, transport=httpx.AsyncHTTPTransport(retries=1)
+    ) as client:
         result = await client.get(
             "https://geocoding-api.open-meteo.com/v1/search",
             params={

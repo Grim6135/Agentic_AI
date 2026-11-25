@@ -19,7 +19,7 @@ Set `GROQ_API_KEY` in `backend/.env` and give `ADK_SERVICE_TOKEN` a long random 
 .\.venv\Scripts\python -c "from pathlib import Path; import secrets; p=Path('.env'); s=p.read_text(); p.write_text(s.replace('ADK_SERVICE_TOKEN=\n', 'ADK_SERVICE_TOKEN='+secrets.token_urlsafe(32)+'\n'))"
 ```
 
-The default ADK and CrewAI model is `groq/llama-3.3-70b-versatile`. To use OpenRouter, set `OPENROUTER_API_KEY` and choose a tool-capable model available to your account using `openrouter/<provider>/<model>` for `ADK_MODEL` and `CREW_MODEL`. The selected provider controls pricing and availability. Both services can also use Gemini. Use `gemini-<model suffix>` for ADK, `gemini/<model id>` for CrewAI and set `GOOGLE_API_KEY`. Open-Meteo, OSRM and Wikipedia require no key for this application.
+The default ADK and CrewAI model is `groq/openai/gpt-oss-120b`. To use OpenRouter, set `OPENROUTER_API_KEY` and choose a tool-capable model available to your account using `openrouter/<provider>/<model>` for `ADK_MODEL` and `CREW_MODEL`. The selected provider controls pricing and availability. Both services can also use Gemini. Use `gemini-<model suffix>` for ADK, `gemini/<model id>` for CrewAI and set `GOOGLE_API_KEY`. Open-Meteo, OSRM and Wikipedia require no key for this application.
 
 Start each command in its own PowerShell window from the project root.
 

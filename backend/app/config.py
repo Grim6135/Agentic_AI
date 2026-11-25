@@ -57,8 +57,8 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     groq_api_key: str = ""
     openrouter_api_key: str = ""
-    crew_model: str = "groq/llama-3.3-70b-versatile"
-    adk_model: str = "groq/llama-3.3-70b-versatile"
+    crew_model: str = "groq/openai/gpt-oss-120b"
+    adk_model: str = "groq/openai/gpt-oss-120b"
     adk_base_url: str = "http://127.0.0.1:8001"
     adk_service_token: str = ""
     hourly_client_limit: int = Field(default=4, ge=1)

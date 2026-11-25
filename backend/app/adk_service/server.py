@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import secrets
 from time import monotonic
 from uuid import uuid4
@@ -186,7 +187,10 @@ async def rpc(body: dict, authorization: str = Header(default="")):
     try:
         async with asyncio.timeout(55):
             data = await research(p)
-    except Exception:
+    except Exception as exc:
+        logging.getLogger("trippy.research").warning(
+            "Destination research failed (%s)", type(exc).__name__
+        )
         return rpc_error(identifier, -32001, "Destination research unavailable")
     return {
         "jsonrpc": "2.0",
