@@ -1,8 +1,29 @@
 import asyncio
 import logging
+import os
 import secrets
+import sys
+from pathlib import Path
 from time import monotonic
 from uuid import uuid4
+
+# Auto re-exec with virtual environment python if invoked with system python
+backend_root_path = Path(__file__).resolve().parents[2]
+if sys.prefix == sys.base_prefix and not os.environ.get("_TRIPPY_VENV_BOOTSTRAPPED"):
+    for venv_py in [
+        backend_root_path / ".venv" / "bin" / "python",
+        Path("/home/Grim6135/B. Tech - CSE/Trippy/backend/.venv/bin/python"),
+    ]:
+        if venv_py.exists():
+            env = os.environ.copy()
+            env["_TRIPPY_VENV_BOOTSTRAPPED"] = "1"
+            env["PYTHONPATH"] = str(backend_root_path) + (":" + env["PYTHONPATH"] if "PYTHONPATH" in env else "")
+            os.execve(str(venv_py), [str(venv_py)] + sys.argv, env)
+
+# Ensure backend root is on sys.path if run directly as a script
+backend_root = str(backend_root_path)
+if backend_root not in sys.path:
+    sys.path.insert(0, backend_root)
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import ValidationError
@@ -37,6 +58,7 @@ def card(request: Request):
             }
         ],
     }
+
 
 
 def adk_model():
@@ -226,3 +248,11 @@ async def rpc(body: dict, authorization: str = Header(default="")):
             ],
         },
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.adk_service.server:adk_app", host="127.0.0.1", port=8001, reload=True)
+
+
+print("Agents are running")

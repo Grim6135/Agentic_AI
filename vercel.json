@@ -1,44 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "frontend": {
-      "root": "frontend",
-      "framework": "vite"
-    },
-    "backend": {
-      "root": "backend",
-      "entrypoint": "Dockerfile",
-      "bindings": [
-        {
-          "type": "service",
-          "service": "research",
-          "format": "url",
-          "env": "RESEARCH_SERVICE_URL"
-        }
-      ],
-      "command": [
-        "sh",
-        "-c",
-        "exec python -m uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-80}\""
-      ]
-    },
-    "research": {
-      "root": "backend",
-      "entrypoint": "Containerfile"
-    }
-  },
+  "installCommand": "npm --prefix frontend install",
+  "buildCommand": "npm --prefix frontend run build",
+  "outputDirectory": "frontend/dist",
+  "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": {
-        "service": "backend"
-      }
-    },
-    {
       "source": "/(.*)",
-      "destination": {
-        "service": "frontend"
-      }
+      "destination": "/index.html"
     }
   ]
 }

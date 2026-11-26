@@ -1,6 +1,26 @@
 import json
+import os
+import sys
 from datetime import date
+from pathlib import Path
 from time import monotonic
+
+# Auto re-exec with virtual environment python if invoked with system python
+backend_root_path = Path(__file__).resolve().parents[2]
+if sys.prefix == sys.base_prefix and not os.environ.get("_TRIPPY_VENV_BOOTSTRAPPED"):
+    for venv_py in [
+        backend_root_path / ".venv" / "bin" / "python",
+        Path("/home/Grim6135/B. Tech - CSE/Trippy/backend/.venv/bin/python"),
+    ]:
+        if venv_py.exists():
+            env = os.environ.copy()
+            env["_TRIPPY_VENV_BOOTSTRAPPED"] = "1"
+            env["PYTHONPATH"] = str(backend_root_path) + (":" + env["PYTHONPATH"] if "PYTHONPATH" in env else "")
+            os.execve(str(venv_py), [str(venv_py)] + sys.argv, env)
+
+backend_root = str(backend_root_path)
+if backend_root not in sys.path:
+    sys.path.insert(0, backend_root)
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -12,8 +32,12 @@ except (ImportError, ModuleNotFoundError):
 from app.integrations import places_service, route_service, weather_service
 from app.tools.budget_tools import calculate_itemized_budget
 
-from .models import Event, clean
-from .registry import lookup
+try:
+    from .models import Event, clean
+    from .registry import lookup
+except (ImportError, ValueError):
+    from app.planning.models import Event, clean
+    from app.planning.registry import lookup
 
 if FastMCP:
     server = FastMCP("TRIPPY")
@@ -135,4 +159,7 @@ def connect():
 
 
 if __name__ == "__main__":
-    server.run(transport="stdio")
+    if hasattr(server, "run"):
+        server.run(transport="stdio")
+    else:
+        print(f"TRIPPY MCP Tools ready. Registered tools: {', '.join(sorted(TOOLS))}")
