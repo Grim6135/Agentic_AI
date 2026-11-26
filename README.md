@@ -71,3 +71,4 @@ The Vercel frontend uses only `VITE_API_BASE_URL`. The server reads `ADK_BASE_UR
 From `backend`, run `.\.venv\Scripts\python -m pytest -q`. From `frontend`, run `npm.cmd test` and `npm.cmd run build`. The SDK integration tests substitute model responses so they can exercise the actual frameworks without provider charges. A public acceptance test additionally requires a real itinerary through the deployed UI.
 
 [Deployment instructions](docs/deployment.md) · [Current verification results](TASK_STATUS.md)
+# Trippy
