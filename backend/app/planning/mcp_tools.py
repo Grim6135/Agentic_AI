@@ -2,8 +2,12 @@ import json
 from datetime import date
 from time import monotonic
 
-from mcp.server.fastmcp import FastMCP
-from mcp.shared.memory import create_connected_server_and_client_session
+try:
+    from mcp.server.fastmcp import FastMCP
+    from mcp.shared.memory import create_connected_server_and_client_session
+except (ImportError, ModuleNotFoundError):
+    FastMCP = None
+    create_connected_server_and_client_session = None
 
 from app.integrations import places_service, route_service, weather_service
 from app.tools.budget_tools import calculate_itemized_budget
@@ -11,7 +15,13 @@ from app.tools.budget_tools import calculate_itemized_budget
 from .models import Event, clean
 from .registry import lookup
 
-server = FastMCP("TRIPPY")
+if FastMCP:
+    server = FastMCP("TRIPPY")
+else:
+    class _FallbackMCP:
+        def tool(self):
+            return lambda fn: fn
+    server = _FallbackMCP()
 TOOLS = frozenset(
     {
         "search_destination_info",
@@ -93,7 +103,35 @@ async def call(session, state, name, **args):
 
 
 def connect():
-    return create_connected_server_and_client_session(server._mcp_server)
+    if create_connected_server_and_client_session and hasattr(server, "_mcp_server"):
+        return create_connected_server_and_client_session(server._mcp_server)
+
+    import inspect
+    from contextlib import asynccontextmanager
+    from types import SimpleNamespace
+
+    _TOOL_FUNCS = {
+        "search_destination_info": search_destination_info,
+        "lookup_travel_records": lookup_travel_records,
+        "calculate_trip_budget": calculate_trip_budget,
+        "get_weather": get_weather,
+        "get_route": get_route,
+    }
+
+    class _LocalSession:
+        async def call_tool(self, name, args):
+            fn = _TOOL_FUNCS[name]
+            if inspect.iscoroutinefunction(fn):
+                res = await fn(**args)
+            else:
+                res = fn(**args)
+            return SimpleNamespace(isError=False, content=[SimpleNamespace(text=json.dumps(res, ensure_ascii=False))])
+
+    @asynccontextmanager
+    async def _direct_session():
+        yield _LocalSession()
+
+    return _direct_session()
 
 
 if __name__ == "__main__":

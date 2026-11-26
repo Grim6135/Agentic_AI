@@ -691,8 +691,13 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
 
                     {/* Accommodation */}
                     {day.accommodation && (
-                      <p className="text-xs text-surface-100/70 mb-1.5">
-                        🏨 <strong>Stay:</strong> {day.accommodation.name} ({currSymbol}{day.accommodation.cost_per_night}/night)
+                      <p className="text-xs text-surface-100/70 mb-1.5 flex flex-wrap items-center gap-1.5">
+                        <span>🏨 <strong>Stay:</strong> {day.accommodation.name} ({currSymbol}{day.accommodation.cost_per_night?.toFixed(2)}/night)</span>
+                        {day.accommodation.rating && (
+                          <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded-md border border-amber-400/30 font-semibold">
+                            ★ {day.accommodation.rating}
+                          </span>
+                        )}
                       </p>
                     )}
 
@@ -700,9 +705,12 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                     {day.transport && day.transport.length > 0 && (
                       <div className="text-xs text-surface-100/70 mb-1.5 space-y-1">
                         {day.transport.map((t, idx) => (
-                          <p key={idx}>
-                            🚆 <strong>Transit:</strong> {t.origin} → {t.destination} ({t.departure} - {t.arrival})
-                          </p>
+                          <div key={idx} className="flex justify-between items-center gap-2">
+                            <span>🚆 <strong>Transit:</strong> {t.origin} → {t.destination} ({t.departure} - {t.arrival})</span>
+                            {t.cost_estimate !== undefined && t.cost_estimate !== null && (
+                              <span className="text-surface-100/50 font-medium">{currSymbol}{t.cost_estimate.toFixed(2)}</span>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}
@@ -712,8 +720,8 @@ export default function PlannerModal({ isOpen, onClose }: PlannerModalProps) {
                       <div className="text-xs text-surface-100/80 space-y-1 pt-1 border-t border-white/5">
                         {day.activities.map((act, idx) => (
                           <div key={idx} className="flex justify-between gap-2">
-                            <span>• {act.name} ({act.duration_hours}h)</span>
-                            <span className="text-surface-100/50">{currSymbol}{act.cost_estimate ?? 0}</span>
+                            <span>• {act.name}{act.duration_hours ? ` (${act.duration_hours}h)` : ''}</span>
+                            <span className="text-surface-100/50">{currSymbol}{act.cost_estimate !== undefined && act.cost_estimate !== null ? act.cost_estimate.toFixed(2) : '0.00'}</span>
                           </div>
                         ))}
                       </div>

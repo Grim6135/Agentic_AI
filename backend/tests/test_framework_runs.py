@@ -55,16 +55,23 @@ async def test_adk_runner_invokes_tool_and_callbacks(monkeypatch):
 
 
 def test_crewai_executes_five_tasks(monkeypatch, tmp_path):
-    from crewai_core import settings as core_settings
-    monkeypatch.setattr(core_settings, "DEFAULT_CONFIG_PATH", tmp_path / "settings.json", raising=False)
     monkeypatch.setenv("CREWAI_STORAGE_DIR", str(tmp_path))
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "false")
     monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
     import crewai
     from app.planning.specialists import ROLES, run_specialists
-    from crewai import BaseLLM
+    from crewai import LLM
 
-    class FixtureModel(BaseLLM):
+    class FixtureModel(LLM):
+        def __init__(self, **kwargs):
+            super().__init__(model="test", temperature=0)
+
+        def supports_function_calling(self):
+            return False
+
+        def supports_stop_words(self):
+            return False
+
         def call(
             self,
             messages,

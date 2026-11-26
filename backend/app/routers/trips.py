@@ -32,7 +32,7 @@ async def plan_trip(preferences: TripPreferences, request: Request, response: Re
         raise HTTPException(429, "Planning limit reached. Try again in the next hour.")
     started = monotonic()
     try:
-        async with asyncio.timeout(250):
+        async with asyncio.timeout(360):
             await resolve(preferences.origin)
             if preferences.destinations:
                 await resolve(preferences.destinations[0])
@@ -47,7 +47,7 @@ async def plan_trip(preferences: TripPreferences, request: Request, response: Re
         ) from None
     except Exception as exc:
         logging.getLogger("trippy").warning(
-            "Trip planning failed (%s)", type(exc).__name__
+            "Trip planning failed (%s: %s)", type(exc).__name__, exc, exc_info=True
         )
         raise HTTPException(
             503, "Trip planning is temporarily unavailable. Please try again."

@@ -34,7 +34,7 @@ FALLBACK_RATES: Dict[str, float] = {
 class ForexService:
     """Provides live currency exchange rates with TTL caching."""
 
-    def __init__(self, ttl_seconds: int = 86400, timeout: float = 4.0):
+    def __init__(self, ttl_seconds: int = 86400, timeout: float = 8.0):
         self.ttl_seconds = ttl_seconds
         self.timeout = timeout
         self._cache: Dict[str, Tuple[float, Dict[str, float]]] = {}  # base -> (timestamp, rates)
@@ -50,13 +50,16 @@ class ForexService:
                 return rates
 
         # Query live API
-        url = f"https://open.er-api.com/v6/latest/{base}"
+        if settings.forex_api_key:
+            url = f"https://v6.exchangerate-api.com/v6/{settings.forex_api_key}/latest/{base}"
+        else:
+            url = f"https://open.er-api.com/v6/latest/{base}"
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 res = await client.get(url)
                 if res.status_code == 200:
                     data = res.json()
-                    rates = data.get("rates", {})
+                    rates = data.get("rates") or data.get("conversion_rates", {})
                     if rates:
                         self._cache[base] = (now, rates)
                         logger.info(f"Updated live forex rates for base {base} ({len(rates)} currencies).")

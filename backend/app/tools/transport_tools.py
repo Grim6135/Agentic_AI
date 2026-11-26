@@ -18,6 +18,82 @@ CURRENCY_MULTIPLIERS = {
     "JPY": 155.0,
 }
 
+INDIAN_CITIES = {
+    "hyderabad", "delhi", "new delhi", "mumbai", "bombay", "bangalore", "bengaluru",
+    "chennai", "madras", "kolkata", "calcutta", "jaipur", "goa", "kasol", "manali",
+    "shimla", "agra", "varanasi", "kochi", "cochin", "pune", "ahmedabad", "udaipur",
+    "rishikesh", "amritsar", "chandigarh", "lucknow", "mysore", "mysuru", "ooty",
+    "darjeeling", "alleppey", "alappuzha", "hampi", "pondicherry", "puducherry",
+    "leh", "ladakh", "srinagar", "gangtok", "guwahati", "shillong", "munnar",
+    "kodaikanal", "jodhpur", "jaisalmer", "pushkar", "haridwar", "dehradun",
+    "surat", "patna", "nagpur", "indore", "bhopal", "vadodara", "ludhiana",
+    "kanpur", "thane", "pimpri-chinchwad", "ghaziabad", "nashik", "faridabad"
+}
+
+COUNTRY_KEYWORDS = {
+    "india": "india",
+    "bharat": "india",
+    "japan": "japan",
+    "italy": "italy",
+    "france": "france",
+    "spain": "spain",
+    "indonesia": "indonesia",
+    "switzerland": "switzerland",
+    "germany": "germany",
+    "uk": "uk",
+    "united kingdom": "uk",
+    "england": "uk",
+    "usa": "usa",
+    "united states": "usa",
+    "thailand": "thailand",
+    "singapore": "singapore",
+    "uae": "uae",
+    "dubai": "uae",
+}
+
+CITY_TO_COUNTRY = {
+    "kyoto": "japan", "tokyo": "japan", "osaka": "japan", "nara": "japan", "hiroshima": "japan",
+    "rome": "italy", "florence": "italy", "venice": "italy", "milan": "italy", "naples": "italy",
+    "paris": "france", "nice": "france", "lyon": "france", "marseille": "france",
+    "barcelona": "spain", "madrid": "spain", "seville": "spain", "valencia": "spain",
+    "bali": "indonesia", "ubud": "indonesia", "jakarta": "indonesia", "seminyak": "indonesia",
+    "interlaken": "switzerland", "zurich": "switzerland", "geneva": "switzerland",
+    "london": "uk", "edinburgh": "uk", "manchester": "uk",
+    "new york": "usa", "san francisco": "usa", "los angeles": "usa", "chicago": "usa",
+    "bangkok": "thailand", "chiang mai": "thailand", "phuket": "thailand",
+    "singapore": "singapore",
+    "dubai": "uae", "abu dhabi": "uae",
+}
+
+
+def detect_country(location_str: str) -> str:
+    """Robust country resolution for domestic and international origins/destinations."""
+    loc = location_str.strip().lower()
+    if not loc:
+        return ""
+    if "," in loc:
+        parts = [p.strip() for p in loc.split(",")]
+        last_part = parts[-1].lower()
+        for kw, c in COUNTRY_KEYWORDS.items():
+            if kw == last_part or kw in last_part:
+                return c
+        for kw, c in COUNTRY_KEYWORDS.items():
+            for p in parts:
+                if kw in p:
+                    return c
+    clean_city = loc.split(",")[0].strip().lower()
+    if clean_city in INDIAN_CITIES or any(ic in loc for ic in INDIAN_CITIES):
+        return "india"
+    if clean_city in CITY_TO_COUNTRY:
+        return CITY_TO_COUNTRY[clean_city]
+    for city, country in CITY_TO_COUNTRY.items():
+        if city in loc:
+            return country
+    for kw, c in COUNTRY_KEYWORDS.items():
+        if kw in loc:
+            return c
+    return ""
+
 
 def estimate_transport(
     origin: str,
@@ -39,8 +115,8 @@ def estimate_transport(
       1: First budget reduction (Economy saver / off-peak transit)
       2: Aggressive budget reduction (Budget carrier / overland train / bus)
     """
-    orig_country = origin.split(",")[-1].strip().lower() if "," in origin else ""
-    dest_country = destination.split(",")[-1].strip().lower() if "," in destination else ""
+    orig_country = detect_country(origin)
+    dest_country = detect_country(destination)
     is_same_country = bool(orig_country and dest_country and orig_country == dest_country)
     is_same_region = is_same_country or any(
         c in origin.lower() and c in destination.lower()

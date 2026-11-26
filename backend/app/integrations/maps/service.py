@@ -7,6 +7,7 @@ Includes in-memory TTL caching and strict timeout enforcement.
 """
 
 from abc import ABC, abstractmethod
+import asyncio
 import logging
 import math
 import time
@@ -20,6 +21,26 @@ logger = logging.getLogger("trippy.maps")
 
 # Approximate coordinates for key hub cities (lat, lon)
 CITY_COORDINATES: Dict[str, Tuple[float, float]] = {
+    "hyderabad": (17.3850, 78.4867),
+    "delhi": (28.6139, 77.2090),
+    "new delhi": (28.6139, 77.2090),
+    "mumbai": (19.0760, 72.8777),
+    "bangalore": (12.9716, 77.5946),
+    "bengaluru": (12.9716, 77.5946),
+    "chennai": (13.0827, 80.2707),
+    "kolkata": (22.5726, 88.3639),
+    "pune": (18.5204, 73.8567),
+    "ahmedabad": (23.0225, 72.5714),
+    "agra": (27.1767, 78.0081),
+    "varanasi": (25.3176, 82.9739),
+    "jaipur": (26.9124, 75.7873),
+    "goa": (15.2993, 74.1240),
+    "kasol": (32.0100, 77.3150),
+    "manali": (32.2432, 77.1892),
+    "shimla": (31.1048, 77.1734),
+    "chandigarh": (30.7333, 76.7794),
+    "amritsar": (31.6340, 74.8723),
+    "kochi": (9.9312, 76.2673),
     "kyoto": (35.0116, 135.7681),
     "tokyo": (35.6762, 139.6503),
     "rome": (41.9028, 12.4964),
@@ -28,17 +49,6 @@ CITY_COORDINATES: Dict[str, Tuple[float, float]] = {
     "london": (51.5074, -0.1278),
     "bali": (-8.4095, 115.1889),
     "jakarta": (-6.2088, 106.8456),
-    "new delhi": (28.6139, 77.2090),
-    "delhi": (28.6139, 77.2090),
-    "kasol": (32.0100, 77.3150),
-    "manali": (32.2432, 77.1892),
-    "shimla": (31.1048, 77.1734),
-    "chandigarh": (30.7333, 76.7794),
-    "goa": (15.2993, 74.1240),
-    "jaipur": (26.9124, 75.7873),
-    "mumbai": (19.0760, 72.8777),
-    "bangalore": (12.9716, 77.5946),
-    "bengaluru": (12.9716, 77.5946),
     "barcelona": (41.3851, 2.1734),
     "madrid": (40.4168, -3.7038),
     "berlin": (52.5200, 13.4050),
@@ -108,8 +118,10 @@ class OSRMRouteProvider(RouteProvider):
     async def get_route(
         self, origin: str, destination: str, mode: str = "mixed"
     ) -> Optional[RouteEstimate]:
-        coord1 = await self._geocode(origin)
-        coord2 = await self._geocode(destination)
+        coord1, coord2 = await asyncio.gather(
+            self._geocode(origin),
+            self._geocode(destination),
+        )
 
         if not coord1 or not coord2:
             return None

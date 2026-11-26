@@ -52,14 +52,15 @@ class Settings(BaseSettings):
     ai_enabled: bool = False
     ai_provider: str = "groq"  # "groq" | "gemini" | "openai"
     ai_api_key: str = ""
+    openai_api_key: str = ""
     ai_model: str = "openai/gpt-oss-120b"
     ai_timeout_seconds: float = 15.0
 
     google_api_key: str = ""
     groq_api_key: str = ""
     openrouter_api_key: str = ""
-    crew_model: str = "groq/openai/gpt-oss-120b"
-    adk_model: str = "groq/openai/gpt-oss-120b"
+    crew_model: str = "groq/qwen/qwen3.8-27b"
+    adk_model: str = "groq/qwen/qwen3.8-27b"
     adk_base_url: str = "http://127.0.0.1:8001"
     research_service_url: str = ""
     adk_service_token: str = ""
@@ -70,13 +71,22 @@ class Settings(BaseSettings):
     rag_enabled: bool = True
     rag_persist_dir: str = ".chroma"
 
-    # External Integrations (Weather & Route APIs)
+    # External Integrations (Weather, Route, Places, Forex & Travel APIs)
     weather_provider: str = "open-meteo"  # "open-meteo" | "mock"
     weather_api_key: str = ""
     maps_provider: str = "osrm"  # "osrm" | "mock"
     maps_api_key: str = ""
+    places_api_key: str = ""  # Google Places / TripAdvisor / Foursquare API key
+    forex_api_key: str = ""  # ExchangeRate-API / Fixer.io API key
+    amadeus_api_key: str = ""  # Amadeus Travel API (Transport Agent live flight/rail)
+    amadeus_api_secret: str = ""
     integration_timeout_seconds: float = 5.0
     integration_cache_ttl_seconds: int = 600
+
+    # Tracing & Observability
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_base_url: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra":"ignore"}
 
@@ -93,7 +103,7 @@ class Settings(BaseSettings):
         if provider == "gemini" or model.startswith("gemini-"):
             return self.google_api_key
         if provider == "openai":
-            return self.ai_api_key
+            return self.openai_api_key or self.ai_api_key
         return ""
 
     def masked_secrets(self) -> dict[str, str]:
@@ -105,11 +115,24 @@ class Settings(BaseSettings):
                 return "***"
             return f"{key[:3]}...{key[-3:]}"
 
-        return {
-            "ai_api_key": mask(self.ai_api_key),
+        result = {
+            "ai_api_key": mask(self.ai_api_key or self.openai_api_key),
             "weather_api_key": mask(self.weather_api_key),
             "maps_api_key": mask(self.maps_api_key),
         }
+        if self.places_api_key:
+            result["places_api_key"] = mask(self.places_api_key)
+        if self.forex_api_key:
+            result["forex_api_key"] = mask(self.forex_api_key)
+        if self.amadeus_api_key:
+            result["amadeus_api_key"] = mask(self.amadeus_api_key)
+        if self.groq_api_key:
+            result["groq_api_key"] = mask(self.groq_api_key)
+        if self.google_api_key:
+            result["google_api_key"] = mask(self.google_api_key)
+        if self.openrouter_api_key:
+            result["openrouter_api_key"] = mask(self.openrouter_api_key)
+        return result
 
 
 settings = Settings()

@@ -24,18 +24,32 @@ class LLMProviderService:
     """Configurable client for Gemini and OpenAI models."""
 
     def __init__(self):
-        self.provider = settings.ai_provider.lower()
-        self.api_key = settings.ai_api_key
-        self.enabled = settings.ai_enabled and bool(self.api_key.strip())
-        self.timeout = settings.ai_timeout_seconds
-
-        # Select model name
-        if settings.ai_model.strip():
-            self.model = settings.ai_model.strip()
-        elif self.provider == "gemini":
-            self.model = "gemini-1.5-flash"
+        # Auto-detect active provider based on configured credentials
+        if settings.groq_api_key.strip():
+            self.provider = "groq"
+            self.api_key = settings.groq_api_key.strip()
+            self.model = (
+                settings.ai_model.strip()
+                if settings.ai_model.strip() and not settings.ai_model.startswith("gemini")
+                else "openai/gpt-oss-120b"
+            )
+            self.enabled = True
+        elif settings.google_api_key.strip():
+            self.provider = "gemini"
+            self.api_key = settings.google_api_key.strip()
+            self.model = settings.ai_model.strip() if settings.ai_model.strip() else "gemini-1.5-flash"
+            self.enabled = True
+        elif settings.openai_api_key.strip() or settings.ai_api_key.strip():
+            self.provider = "openai"
+            self.api_key = (settings.openai_api_key or settings.ai_api_key).strip()
+            self.model = settings.ai_model.strip() if settings.ai_model.strip() else "gpt-4o-mini"
+            self.enabled = True
         else:
-            self.model = "gpt-4o-mini"
+            self.provider = settings.ai_provider.lower()
+            self.api_key = settings.openai_api_key or settings.ai_api_key
+            self.enabled = settings.ai_enabled and bool(self.api_key.strip())
+            self.model = settings.ai_model.strip() if settings.ai_model.strip() else "gpt-4o-mini"
+        self.timeout = settings.ai_timeout_seconds
 
     def is_available(self) -> bool:
         """Returns True if AI provider is enabled and configured with an API key."""
@@ -177,6 +191,7 @@ class LLMProviderService:
 
         # Groq model fallback if user didn't specify or specified invalid
         model_name = self.model if self.model and not self.model.startswith("gemini") else "openai/gpt-oss-120b"
+        model_name = model_name.removeprefix("groq/")
 
         payload: Dict[str, Any] = {
             "model": model_name,

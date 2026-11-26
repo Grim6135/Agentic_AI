@@ -47,8 +47,10 @@ def adk_model():
     return LiteLlm(
         model=settings.adk_model,
         api_key=settings.model_key(settings.adk_model),
-        timeout=20,
-        num_retries=0,
+        timeout=25,
+        num_retries=2,
+        max_tokens=100,
+        max_completion_tokens=100,
     )
 
 
@@ -133,16 +135,34 @@ async def research(p: TripPreferences):
         }
     )
     try:
-        async for event in runner.run_async(
-            user_id=uid,
-            session_id=session.id,
-            new_message=types.Content(role="user", parts=[types.Part(text=body)]),
-            run_config=RunConfig(max_llm_calls=3),
-        ):
-            if getattr(event, "error_code", None):
-                raise RuntimeError("Research model failed")
+        try:
+            async for event in runner.run_async(
+                user_id=uid,
+                session_id=session.id,
+                new_message=types.Content(role="user", parts=[types.Part(text=body)]),
+                run_config=RunConfig(max_llm_calls=3),
+            ):
+                if getattr(event, "error_code", None):
+                    logging.getLogger("trippy.research").warning(
+                        "Research model event error: %s", getattr(event, "error_message", event.error_code)
+                    )
+                    if p.destinations:
+                        await research_city(p.destinations[0])
+                        break
+                    raise RuntimeError("Research model failed")
+        except Exception as exc:
+            logging.getLogger("trippy.research").warning(
+                "Research runner exception (%s: %s)", type(exc).__name__, exc
+            )
+            if p.destinations:
+                await research_city(p.destinations[0])
+            else:
+                raise
         if not findings:
-            raise RuntimeError("Research completed without a lookup")
+            if p.destinations:
+                await research_city(p.destinations[0])
+            else:
+                raise RuntimeError("Research completed without a lookup")
         return {
             **next(reversed(findings.values())),
             "events": [e.model_dump() for e in events],
@@ -190,7 +210,7 @@ async def rpc(body: dict, authorization: str = Header(default="")):
             data = await research(p)
     except Exception as exc:
         logging.getLogger("trippy.research").warning(
-            "Destination research failed (%s)", type(exc).__name__
+            "Destination research failed (%s: %s)", type(exc).__name__, exc, exc_info=True
         )
         return rpc_error(identifier, -32001, "Destination research unavailable")
     return {

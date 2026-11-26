@@ -57,6 +57,7 @@ class StayActivityAgentOutput(BaseModel):
     )
     cost_per_night: float = Field(default=0.0, ge=0.0)
     total_accommodation_cost: float = Field(default=0.0, ge=0.0)
+    rating: Optional[float] = Field(default=4.5, ge=0.0, le=5.0)
     activities: List[Activity] = Field(default_factory=list)
     total_activities_cost: float = Field(default=0.0, ge=0.0)
     daily_food_cost: float = Field(default=0.0, ge=0.0)

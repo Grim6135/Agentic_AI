@@ -81,8 +81,20 @@ class PlacesService:
         except Exception as e:
             logger.debug(f"Wiki summary failed for {clean_name}: {e}")
 
-        # 2. Fetch Nearby Points of Interest via Wikipedia Geosearch
+        # 2. Fetch Nearby Points of Interest via Wikipedia Geosearch & Landmark Search
         landmarks: List[PlacePOI] = []
+        ignored_patterns = (
+            "siege of", "battle of", "timeline of", "history of", "list of", "lists of",
+            "outline of", "treaty of", "commune", "census", "election", "airport", "railway station",
+            "tourist attraction", "landmarks in"
+        )
+
+        def is_valid_poi(t: str) -> bool:
+            tl = t.lower()
+            if tl == clean_name.lower():
+                return False
+            return not any(pat in tl for pat in ignored_patterns)
+
         if resolved_coords:
             lat, lon = resolved_coords
             try:
@@ -91,8 +103,8 @@ class PlacesService:
                     "action": "query",
                     "list": "geosearch",
                     "gscoord": f"{lat}|{lon}",
-                    "gsradius": 15000,  # 15km radius
-                    "gslimit": 12,
+                    "gsradius": 10000,  # 10km radius (Wikipedia API maximum)
+                    "gslimit": 15,
                     "format": "json",
                 }
                 async with httpx.AsyncClient(timeout=self.timeout, headers=self._headers, follow_redirects=True) as client:
@@ -101,8 +113,7 @@ class PlacesService:
                         results = geo_res.json().get("query", {}).get("geosearch", [])
                         for item in results:
                             title = item.get("title", "")
-                            # Filter out self-title or general district name if exact match
-                            if title.lower() != clean_name.lower():
+                            if is_valid_poi(title):
                                 landmarks.append(
                                     PlacePOI(
                                         name=title,
@@ -114,6 +125,36 @@ class PlacesService:
                                 )
             except Exception as e:
                 logger.debug(f"Wiki geosearch failed for {clean_name}: {e}")
+
+        # If geosearch returned few landmarks, supplement with verified Wikipedia landmark search
+        if len(landmarks) < 4:
+            try:
+                search_url = "https://en.wikipedia.org/w/api.php"
+                sparams = {
+                    "action": "query",
+                    "list": "search",
+                    "srsearch": f"{clean_name} landmarks attractions monuments",
+                    "srlimit": 10,
+                    "format": "json",
+                }
+                async with httpx.AsyncClient(timeout=self.timeout, headers=self._headers, follow_redirects=True) as client:
+                    s_res = await client.get(search_url, params=sparams)
+                    if s_res.status_code == 200:
+                        s_results = s_res.json().get("query", {}).get("search", [])
+                        existing_names = {lm.name.lower() for lm in landmarks}
+                        for item in s_results:
+                            title = item.get("title", "")
+                            if is_valid_poi(title) and title.lower() not in existing_names:
+                                landmarks.append(
+                                    PlacePOI(
+                                        name=title,
+                                        description=item.get("snippet", ""),
+                                        source_url=f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                                    )
+                                )
+                                existing_names.add(title.lower())
+            except Exception as e:
+                logger.debug(f"Wiki landmark search failed for {clean_name}: {e}")
 
         info = DestinationInfo(
             title=clean_name,
